@@ -1,4 +1,7 @@
+#include <sstream>
 #include <vector>
+
+using namespace std;
 
 struct Edge {
   int src;

@@ -1,6 +1,9 @@
+#include "map.h"
+
 using namespace picojson;
 
-bool Map::Init(string json) {
+bool Map::Init(std::string json) {
+  value v;
   string err = parse(v, json);
   if (!err.empty()) {
     cerr << err << endl;
@@ -12,19 +15,19 @@ bool Map::Init(string json) {
 }
 bool Map::Init(picojson::object json) {
   Clear();
-  // = {"sites" : [Site], "rivers" : [River], "mines" : [SiteId]}
-  auto l_sites = json["sites"].get<array>();
+  // {"sites" : [Site], "rivers" : [River], "mines" : [SiteId]}
+  auto l_sites = json["sites"].get<picojson::array>();
   for (const value &v : l_sites) {
     // {"id" : Nat }
     auto o = v.get<object>();
-    int id = (int)o.["id"].get<double>();
+    int id = (int)o["id"].get<double>();
     int index = site_id_map.size();
     site_id_map[id] = index;
     site_id_rev_map[index] = id;
-    sites.emplace_back(index)
+    sites.emplace_back(index);
   }
-  graph = Graph(size_id_map.size());
-  auto l_rivers = json["rivers"].get<array>();
+  graph = Graph(site_id_map.size());
+  auto l_rivers = json["rivers"].get<picojson::array>();
   for (const value &v : l_rivers) {
     // {"source" : SiteId, "target" : SiteId}
     auto o = v.get<object>();
@@ -34,7 +37,7 @@ bool Map::Init(picojson::object json) {
     target = site_id_map[target];
     graph[source].emplace_back(source, target);
   }
-  auto l_mines = json["mines"].get<array>();
+  auto l_mines = json["mines"].get<picojson::array>();
   for (const value &v : l_mines) {
     // [SiteId]
     int id = (int)v.get<double>();
