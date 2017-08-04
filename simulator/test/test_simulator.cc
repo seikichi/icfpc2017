@@ -4,7 +4,7 @@ using namespace std;
 
 TEST(spawn, basic) {
   string output;
-  auto r = Spawn({"/bin/cat"},
+  auto r = Spawn({"cat"},
                  "Hello, World!!",
                  1000,
                  &output);
