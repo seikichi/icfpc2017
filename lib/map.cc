@@ -26,7 +26,8 @@ bool Map::Init(picojson::object json) {
     site_id_rev_map[index] = id;
     sites.emplace_back(index);
   }
-  graph = Graph(site_id_map.size());
+  const int n = site_id_map.size();
+  graph = Graph(n);
   auto l_rivers = json["rivers"].get<picojson::array>();
   for (const value &v : l_rivers) {
     // {"source" : SiteId, "target" : SiteId}
@@ -44,5 +45,24 @@ bool Map::Init(picojson::object json) {
     id = site_id_map[id];
     sites[id].setMine(true);
   }
+  InitDists();
   return true;
+}
+
+void Map::InitDists() {
+  // TODO サイズが大きい場合の対応
+  dists = vector<vector<int>>(Size(), vector<int>(Size(), 1 << 29));
+  for (int i = 0; i < Size(); i++) { dists[i][i] = 0; }
+  for (const auto &es : graph) {
+    for (const auto &e : es) {
+      dists[e.src][e.dest] = 1;
+    }
+  }
+  for (int k = 0; k < Size(); k++) {
+    for (int i = 0; i < Size(); i++) {
+      for (int j = 0; j < Size(); j++) {
+        dists[i][j] = min(dists[i][j], dists[i][k] + dists[k][j]);
+      }
+    }
+  }
 }
