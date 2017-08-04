@@ -4,7 +4,7 @@ CXX = g++
 
 OVERALL_OPTIONS = -pipe
 LANGUAGE_OPTIONS = -std=c++14
-WARNING_OPTIONS = -Wall -Wextra -Weffc++ -Woverloaded-virtual -Werror
+WARNING_OPTIONS = -Wall -Wextra -Woverloaded-virtual -Werror
 OPTIMIZATION_OPTIONS = -O3 -fno-omit-frame-pointer -march=native -mtune=native
 CODE_GENERATION_OPTIONS = -fPIC -pthread
 PREPROCESSOR_OPTIONS = -MMD -MP -I../lib -I../vendor/picojson
