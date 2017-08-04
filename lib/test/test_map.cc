@@ -35,11 +35,14 @@ TEST(map, Deseralize) {
   ASSERT_EQ(g.size(), 2);
   ASSERT_EQ(g[0].size(), 1);
   ASSERT_EQ(g[0][0].dest, 1);
-  ASSERT_EQ(g[1].size(), 0);
+  ASSERT_EQ(g[0][0].id, 0);
+  ASSERT_EQ(g[1].size(), 1);
+  ASSERT_EQ(g[1][0].dest, 0);
+  ASSERT_EQ(g[1][0].id, 0);
 
   ASSERT_EQ(field.Dist(0, 0), 0);
   ASSERT_EQ(field.Dist(0, 1), 1);
-  ASSERT_TRUE(field.Dist(1, 0) > 100);
+  ASSERT_EQ(field.Dist(1, 0), 1);
 }
 
 TEST(map, Serialize) {

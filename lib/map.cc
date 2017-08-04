@@ -29,6 +29,7 @@ bool Map::Deserialize(const picojson::object &json) {
   const int n = site_id_map.size();
   graph = ::Graph(n);
   auto l_rivers = json.at("rivers").get<picojson::array>();
+  int edge_num = 0;
   for (const value &v : l_rivers) {
     // {"source" : SiteId, "target" : SiteId}
     auto o = v.get<object>();
@@ -36,7 +37,9 @@ bool Map::Deserialize(const picojson::object &json) {
     int target = (int)o.at("target").get<double>();
     source = site_id_map[source];
     target = site_id_map[target];
-    graph[source].emplace_back(source, target);
+    graph[source].emplace_back(edge_num, source, target);
+    graph[target].emplace_back(edge_num, target, source);
+    edge_num++;
   }
   auto l_mines = json.at("mines").get<picojson::array>();
   for (const value &v : l_mines) {
