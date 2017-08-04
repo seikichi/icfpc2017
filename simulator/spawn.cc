@@ -58,7 +58,7 @@ SpawnResult Spawn(
     }
     args[command.size()] = nullptr;
 
-    execv(path.c_str(), &args[0]);
+    execvp(path.c_str(), &args[0]);
 
     // There must be an error
     string message = string("Failed to exec child process: ") + JoinString(command, " ");
