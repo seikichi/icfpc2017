@@ -29,3 +29,11 @@ TEST(spawn, notfound) {
   auto r = Spawn({"/dummy"}, "", 1000, &output);
   ASSERT_EQ(r, SpawnResult::kExecutionFailure);
 }
+
+TEST(spawn, large) {
+  string input(32*1024*1024, 'x');
+  string output;
+  auto r = Spawn({"cat"}, input, 1000, &output);
+  ASSERT_EQ(r, SpawnResult::kSuccess);
+  ASSERT_EQ(output, input);
+}
