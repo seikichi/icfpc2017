@@ -7,6 +7,7 @@
 #include "strings.h"
 #include "map.h"
 #include "move.h"
+#include "cout.h"
 using namespace std;
 
 int SETUP_TIMEOUT_MS = 10000;
@@ -91,21 +92,6 @@ vector<PunterState> Setup(const vector<Punter>& punters, const Map& map, bool pr
   return states;
 }
 
-template <typename T>
-inline void PrintVector(ostream& stream, const std::vector<T>& v) {
-  stream << "[";
-
-  bool first = true;
-  for (auto& e : v) {
-    if (first)
-      first = false;
-    else
-      stream << ", ";
-    stream << e;
-  }
-  stream << "]\n";
-}
-
 int main(int argc, char** argv) {
   if (argc <= 3) {
     fprintf(stderr, "Usage: %s MAP PUNTER_0 PUNTER_1 ...\n", argv[0]);
@@ -128,7 +114,7 @@ int main(int argc, char** argv) {
   }
 
   auto states = Setup(punters, map, true);
-  PrintVector(cout, states);
+  cout << "State: " << states << endl;
 
   return 0;
 }
