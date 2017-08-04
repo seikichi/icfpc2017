@@ -21,12 +21,12 @@ TEST(map, declear) {
   field.Clear();
 }
 
-TEST(map, Init) {
+TEST(map, Deseralize) {
   Map field;
-  bool ret = field.Init(sample_json);
+  bool ret = field.Deserialize(sample_json);
   ASSERT_TRUE(ret);
-  const vector<Site> &sites = field.GetSites();
-  const Graph &g = field.GetGraph();
+  const vector<Site> &sites = field.Sites();
+  const Graph &g = field.Graph();
 
   ASSERT_EQ(sites.size(), 2);
   ASSERT_TRUE(sites[0].is_mine);
@@ -44,7 +44,7 @@ TEST(map, Init) {
 
 TEST(map, Serialize) {
   Map field;
-  field.Init(sample_json);
+  field.Deserialize(sample_json);
   string str = field.SerializeString();
   ASSERT_EQ(str, R"({"mines":[0],"rivers":[{"dest":1,"source":0}],"sites":[{"id":0},{"id":1}]})");
 }

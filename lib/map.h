@@ -8,8 +8,8 @@ using namespace std;
 class Map {
 public:
   Map() { Clear(); }
-  Map(const std::string &json) { Init(json); }
-  Map(const picojson::object &json) { Init(json); }
+  Map(const std::string &json) { Deserialize(json); }
+  Map(const picojson::object &json) { Deserialize(json); }
   void Clear() {
     sites.clear();
     graph.clear();
@@ -17,13 +17,13 @@ public:
     site_id_rev_map.clear();
     dists.clear();
   }
-  bool Init(const string &json);
-  bool Init(const picojson::object &json);
   int Size() const { return site_id_map.size(); }
   int Dist(int from, int to) const { return dists[from][to]; }
-  const vector<Site> &GetSites() const { return sites; }
-  const vector<Edges> &GetGraph() const { return graph; }
+  const vector<Site> &Sites() const { return sites; }
+  const vector<Edges> &Graph() const { return graph; }
 
+  bool Deserialize(const string &json);
+  bool Deserialize(const picojson::object &json);
   std::string SerializeString(bool prettify = false) const;
   picojson::object SerializeJson() const;
 
