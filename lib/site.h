@@ -1,4 +1,4 @@
-
+#pragma once
 struct Site {
   int id;
   bool is_mine = false;

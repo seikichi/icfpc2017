@@ -1,15 +1,19 @@
+#pragma once
 #include <vector>
 #include <deque>
 #include <map>
 #include <set>
+#include <iostream>
 using namespace std;
 
 template <class T>
 ostream &operator<<(ostream &os, const vector<T> &rhs) {
   os << "[ ";
-  FORIT(it, rhs) {
-    if (it != rhs.begin()) { os << ", "; }
-    os << *it;
+  bool first = true;
+  for (const T &v : rhs) {
+    if (!first) { os << ", "; }
+    first = false;
+    os << v;
   }
   os << " ]";
   return os;
@@ -17,9 +21,11 @@ ostream &operator<<(ostream &os, const vector<T> &rhs) {
 template <class T>
 ostream &operator<<(ostream &os, const deque<T> &rhs) {
   os << "[ ";
-  FORIT(it, rhs) {
-    if (it != rhs.begin()) { os << ", "; }
-    os << *it;
+  bool first = true;
+  for (const T &v : rhs) {
+    if (!first) { os << ", "; }
+    first = false;
+    os << v;
   }
   os << " ]";
   return os;
@@ -27,9 +33,11 @@ ostream &operator<<(ostream &os, const deque<T> &rhs) {
 template <class T, class U>
 ostream &operator<<(ostream &os, const map<T, U> &rhs) {
   os << "{" << endl;
-  FORIT(it, rhs) {
-    if (it != rhs.begin()) { os << "," << endl; }
-    os << "  " << it->first << " : " << it->second;
+  bool first = true;
+  for (const pair<T, U> &v : rhs) {
+    if (!first) { os << "," << endl; }
+    first = false;
+    os << " " << v.first << " : " << v.second;
   }
   os << endl << "}";
   return os;
@@ -37,9 +45,11 @@ ostream &operator<<(ostream &os, const map<T, U> &rhs) {
 template <class T>
 ostream &operator<<(ostream &os, const set<T> &rhs) {
   os << "{ ";
-  FORIT(it, rhs) {
-    if (it != rhs.begin()) { os << ", "; }
-    os << *it;
+  bool first = true;
+  for (const T &v : rhs) {
+    if (!first) { os << ", "; }
+    first = false;
+    os << v;
   }
   os << " }";
   return os;
