@@ -2,7 +2,9 @@
 #include "strings.h"
 #include <cassert>
 #include <condition_variable>
+#include <signal.h>
 #include <stdio.h>
+#include <sys/types.h>
 #include <sys/wait.h>
 #include <thread>
 #include <unistd.h>
