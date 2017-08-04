@@ -69,9 +69,10 @@ picojson::object Map::SerializeJson() const {
   }
   for (const auto &es : graph) {
     for (const auto &e : es) {
+      if (e.src >= e.dest) { continue; }
       picojson::object l_river;
       l_river["source"] = value((double)site_id_rev_map.at(e.src));
-      l_river["dest"] = value((double)site_id_rev_map.at(e.dest));
+      l_river["target"] = value((double)site_id_rev_map.at(e.dest));
       l_rivers.push_back(value(l_river));
     }
   }
