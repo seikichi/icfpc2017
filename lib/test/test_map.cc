@@ -1,13 +1,7 @@
 #include "map.h"
 #include "gtest/gtest.h"
 
-TEST(map, declear) {
-  Map field;
-  field.Clear();
-}
-
-TEST(map, Init) {
-  string json = R"(
+const string sample_json = R"(
 {
   "sites": [
     {"id":0},
@@ -21,8 +15,15 @@ TEST(map, Init) {
   ]
 }
 )";
+
+TEST(map, declear) {
   Map field;
-  bool ret = field.Init(json);
+  field.Clear();
+}
+
+TEST(map, Init) {
+  Map field;
+  bool ret = field.Init(sample_json);
   ASSERT_TRUE(ret);
   const vector<Site> &sites = field.getSites();
   const Graph &g = field.getGraph();
@@ -39,4 +40,11 @@ TEST(map, Init) {
   ASSERT_EQ(field.Dist(0, 0), 0);
   ASSERT_EQ(field.Dist(0, 1), 1);
   ASSERT_TRUE(field.Dist(1, 0) > 100);
+}
+
+TEST(map, Serialize) {
+  Map field;
+  field.Init(sample_json);
+  string str = field.SerializeString();
+  ASSERT_EQ(str, R"({"mines":[0],"rivers":[{"dest":1,"source":0}],"sites":[{"id":0},{"id":1}]})");
 }

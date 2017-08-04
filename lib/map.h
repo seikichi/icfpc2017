@@ -17,12 +17,15 @@ public:
     site_id_rev_map.clear();
     dists.clear();
   }
-  bool Init(string json);
-  bool Init(picojson::object json);
+  bool Init(const string &json);
+  bool Init(const picojson::object &json);
   int Size() const { return site_id_map.size(); }
   int Dist(int from, int to) const { return dists[from][to]; }
   const vector<Site> &getSites() const { return sites; }
   const vector<Edges> &getGraph() const { return graph; }
+
+  std::string SerializeString(bool prettify = false) const;
+  picojson::object SerializeJson() const;
 
 private:
   void InitDists();
