@@ -38,6 +38,8 @@ SpawnResult Spawn(
   }
   if (pid == 0) {
     // child
+    setpgid(0, 0);
+
     if (dup2(pipe_stdin_fds[0], STDIN_FILENO) == -1) {
       perror("dup2");
       exit(100);
@@ -135,7 +137,7 @@ SpawnResult Spawn(
       cv.wait_until(lock, deadline);
       if (deadline < steady_clock::now()) {
         fprintf(stderr, "Child process timed out.\n");
-        kill(pid, SIGKILL);
+        killpg(pid, SIGKILL);
         err = SpawnResult::kTimeout;
         break;
       }
