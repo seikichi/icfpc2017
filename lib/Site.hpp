@@ -1,7 +1,7 @@
 
 struct Site {
   int id;
-  bool is_mine;
+  bool is_mine = false;
   Site() = delete;
   Site(int id) : id(id) {;}
   void setMine(bool flag) { is_mine = flag; }

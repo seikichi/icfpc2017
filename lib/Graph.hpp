@@ -20,14 +20,3 @@ typedef vector<Edge> Edges;
 typedef vector<Edges> Graph;
 // typedef vector<Weight> Array;
 // typedef vector<Array> Matrix;
-
-template <class T>
-ostream &operator<<(ostream &os, const vector<T> &rhs) {
-  os << "[ ";
-  FORIT(it, rhs) {
-    if (it != rhs.begin()) { os << ", "; }
-    os << *it;
-  }
-  os << " ]";
-  return os;
-}
