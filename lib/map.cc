@@ -2,7 +2,7 @@
 
 using namespace picojson;
 
-bool Map::Init(const string &json) {
+bool Map::Deserialize(const string &json) {
   value v;
   string err = parse(v, json);
   if (!err.empty()) {
@@ -11,9 +11,9 @@ bool Map::Init(const string &json) {
   }
 
   auto o = v.get<object>();
-  return Init(o);
+  return Deserialize(o);
 }
-bool Map::Init(const picojson::object &json) {
+bool Map::Deserialize(const picojson::object &json) {
   Clear();
   // {"sites" : [Site], "rivers" : [River], "mines" : [SiteId]}
   auto l_sites = json.at("sites").get<picojson::array>();
@@ -27,7 +27,7 @@ bool Map::Init(const picojson::object &json) {
     sites.emplace_back(index);
   }
   const int n = site_id_map.size();
-  graph = Graph(n);
+  graph = ::Graph(n);
   auto l_rivers = json.at("rivers").get<picojson::array>();
   for (const value &v : l_rivers) {
     // {"source" : SiteId, "target" : SiteId}
