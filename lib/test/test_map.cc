@@ -46,5 +46,6 @@ TEST(map, Serialize) {
   Map field;
   field.Deserialize(sample_json);
   string str = field.SerializeString();
+  // cout << str << endl;
   ASSERT_EQ(str, R"({"mines":[0],"rivers":[{"dest":1,"source":0}],"sites":[{"id":0},{"id":1}]})");
 }
