@@ -27,7 +27,7 @@ std::string JoinString(const vector<string>& strings, const string& separator) {
 SpawnResult Spawn(
     const vector<string>& command,
     const string& input,
-    int timeoutMillis,
+    int timeout_millis,
     string* output) {
 
   assert(!command.empty());
@@ -140,7 +140,7 @@ SpawnResult Spawn(
   SpawnResult err = SpawnResult::kSuccess;
 
   using namespace chrono;
-  steady_clock::time_point deadline = steady_clock::now() + milliseconds(timeoutMillis);
+  steady_clock::time_point deadline = steady_clock::now() + milliseconds(timeout_millis);
 
   {
     unique_lock<mutex> lock(mtx);
