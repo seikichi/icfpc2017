@@ -1,0 +1,68 @@
+#include "map.h"
+
+using namespace picojson;
+
+bool Map::Init(std::string json) {
+  value v;
+  string err = parse(v, json);
+  if (!err.empty()) {
+    cerr << err << endl;
+    return false;
+  }
+
+  auto o = v.get<object>();
+  return Init(o);
+}
+bool Map::Init(picojson::object json) {
+  Clear();
+  // {"sites" : [Site], "rivers" : [River], "mines" : [SiteId]}
+  auto l_sites = json["sites"].get<picojson::array>();
+  for (const value &v : l_sites) {
+    // {"id" : Nat }
+    auto o = v.get<object>();
+    int id = (int)o["id"].get<double>();
+    int index = site_id_map.size();
+    site_id_map[id] = index;
+    site_id_rev_map[index] = id;
+    sites.emplace_back(index);
+  }
+  const int n = site_id_map.size();
+  graph = Graph(n);
+  auto l_rivers = json["rivers"].get<picojson::array>();
+  for (const value &v : l_rivers) {
+    // {"source" : SiteId, "target" : SiteId}
+    auto o = v.get<object>();
+    int source = (int)o["source"].get<double>();
+    int target = (int)o["target"].get<double>();
+    source = site_id_map[source];
+    target = site_id_map[target];
+    graph[source].emplace_back(source, target);
+  }
+  auto l_mines = json["mines"].get<picojson::array>();
+  for (const value &v : l_mines) {
+    // [SiteId]
+    int id = (int)v.get<double>();
+    id = site_id_map[id];
+    sites[id].setMine(true);
+  }
+  InitDists();
+  return true;
+}
+
+void Map::InitDists() {
+  // TODO サイズが大きい場合の対応
+  dists = vector<vector<int>>(Size(), vector<int>(Size(), 1 << 29));
+  for (int i = 0; i < Size(); i++) { dists[i][i] = 0; }
+  for (const auto &es : graph) {
+    for (const auto &e : es) {
+      dists[e.src][e.dest] = 1;
+    }
+  }
+  for (int k = 0; k < Size(); k++) {
+    for (int i = 0; i < Size(); i++) {
+      for (int j = 0; j < Size(); j++) {
+        dists[i][j] = min(dists[i][j], dists[i][k] + dists[k][j]);
+      }
+    }
+  }
+}
