@@ -25,8 +25,8 @@ TEST(map, Init) {
   Map field;
   bool ret = field.Init(sample_json);
   ASSERT_TRUE(ret);
-  const vector<Site> &sites = field.getSites();
-  const Graph &g = field.getGraph();
+  const vector<Site> &sites = field.GetSites();
+  const Graph &g = field.GetGraph();
 
   ASSERT_EQ(sites.size(), 2);
   ASSERT_TRUE(sites[0].is_mine);
