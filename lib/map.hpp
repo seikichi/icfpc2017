@@ -1,6 +1,7 @@
 #include <picojson/picojson.h>
 
-#include "Graph.hpp"
+#include "graph.hpp"
+#include "site.hpp"
 
 class Map {
 public:
