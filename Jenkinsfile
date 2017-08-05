@@ -32,9 +32,6 @@ pipeline {
 
   post {
     failure {
-      when {
-        branch 'master'
-      }
       slackSend(color: 'danger', message: "BUILD FAILED <${env.BUILD_URL}console|Jenkins Console>")
     }
   }
