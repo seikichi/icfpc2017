@@ -33,3 +33,12 @@ string ReadFileOrDie(const string& filename) {
   return str;
 }
 
+picojson::object StringToJson(const std::string &str) {
+  picojson::value v;
+  string err = parse(v, str);
+  if (!err.empty()) {
+    cerr << err << endl;
+    throw "Json is invalid";
+  }
+  return v.get<picojson::object>();
+}

@@ -1,19 +1,11 @@
 #include "game.h"
+#include "strings.h"
 
 using namespace picojson;
 
 bool Game::Deserialize(const string &json) {
-  value v;
-  string err = parse(v, json);
-  if (!err.empty()) {
-    cerr << err << endl;
-    return false;
-  }
-
-  auto o = v.get<object>();
-  return Deserialize(o);
+  return Deserialize(StringToJson(json));
 }
-
 bool Game::Deserialize(const picojson::object &json) {
   Clear();
   // {"punter" : p, "punters" : n, "map" : map}
