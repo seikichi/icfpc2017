@@ -69,8 +69,7 @@ void OfflineClientProtocol::Send() {
   } else if (phase == GamePhase::kGamePlay) {
     assert(next_state != "");
     assert(player_move.PunterID() != -1);
-    picojson::object l_move;
-    l_move["move"] = picojson::value(player_move.SerializeJson());
+    picojson::object l_move = player_move.SerializeJson();
     l_move["state"] = picojson::value(next_state);
     SendString(picojson::value(l_move).serialize());
   } else {
