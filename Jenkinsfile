@@ -28,6 +28,17 @@ pipeline {
         }
       }
     }
+
+    ['pass', 'random', 'greedy'].each {
+      stage("ai:${it}") {
+        steps {
+          dir(it) {
+            sh 'make clean'
+            sh 'make test'
+          }
+        }
+      }
+    }
   }
 
   post {
