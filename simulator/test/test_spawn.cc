@@ -59,7 +59,7 @@ TEST(SpawnProcess, ReadTimeout) {
 }
 
 TEST(SpawnProcess, Large) {
-  auto p = SpawnProcess({"sponge"});
+  auto p = SpawnProcess({"./test/mysponge"});
 
   string input(32*1024*1024, 'x');
   auto r1 = p->WriteMessage(input, 1000);
