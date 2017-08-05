@@ -1,5 +1,6 @@
 #include "protocol.h"
 #include <stdio.h>
+#include <memory>
 #include "picojson.h"
 
 #include "strings.h"
@@ -79,15 +80,15 @@ void OfflineClientProtocol::Send() {
 }
 
 string OfflineClientProtocol::ReceiveString() {
-  // TODO 1GBの入力に対応させる
-  char buffer[100000];
   int json_size;
   char c;
   int v = scanf("%d%c", &json_size, &c);
+  unique_ptr<char[]> buffer = make_unique<char[]>(json_size + 10);
   assert(v == 2);
-  int size = fread(buffer, sizeof(char), json_size, stdin);
+  int size = fread(buffer.get(), sizeof(char), json_size, stdin);
   buffer[size] = 0;
-  return string(buffer);
+  string ret = string(buffer.get());
+  return ret;
 }
 
 void OfflineClientProtocol::SendString(const string &str) {
