@@ -41,7 +41,7 @@ struct PunterState {
   int n_consecutive_timeout = 0;
   bool is_zombie = false;
   string state;
-  Move prev_move = Move::Pass();
+  Move prev_move = Move::Pass(-1);
 };
 
 ostream& operator<<(ostream& stream, const PunterState& ps) {
@@ -57,12 +57,12 @@ PunterState ParseSetupOutput(const Punter& p, const string& output) {
   string err = picojson::parse(v, output);
   if (!err.empty()) {
     cerr << p << ": Failed to parse setup output: " << output << endl;
-    return { 0, true, "",  Move::Pass() };
+    return { 0, true, "",  Move::Pass(p.Id()) };
   }
   auto o = v.get<picojson::object>();
   string state = o.at("state").get<string>();
   // TODO: validate o.at("ready")
-  return { 0, false, state, Move::Pass() };
+  return { 0, false, state, Move::Pass(p.Id()) };
 }
 
 vector<PunterState> Setup(const vector<Punter>& punters, const Map& map, bool prettify) {
@@ -79,7 +79,7 @@ vector<PunterState> Setup(const vector<Punter>& punters, const Map& map, bool pr
     if (r == SpawnResult::kSuccess) {
       states.push_back(ParseSetupOutput(p, output));
     } else if (r == SpawnResult::kExecutionFailure || r == SpawnResult::kTimeout) {
-      states.push_back({ 1, false, "", Move::Pass() });
+      states.push_back({ 1, false, "", Move::Pass(p.Id()) });
     } else {
       assert(false);
     }
@@ -116,7 +116,7 @@ void DoRound(
 
   picojson::array moves;
   for (int i = 0; i < (int)punter_states->size(); ++i) {
-    auto v = picojson::value((*punter_states)[i].prev_move.SerializeJson(i));
+    auto v = picojson::value((*punter_states)[i].prev_move.SerializeJson());
     moves.push_back(v);
   }
 
@@ -141,7 +141,7 @@ void DoRound(
     auto r = Spawn({punter.Path()}, input, GAMEPLAY_TIMEOUT_MS, &output);
     if (r == SpawnResult::kExecutionFailure || r == SpawnResult::kTimeout) {
       punter_state.n_consecutive_timeout++;
-      punter_state.prev_move = Move::Pass();
+      punter_state.prev_move = Move::Pass(punter.Id());
       if (punter_state.n_consecutive_timeout == MAX_CONSECUTIVE_TIMEOUT) {
         punter_state.is_zombie = true;
       }
@@ -150,7 +150,7 @@ void DoRound(
 
     if (ParseRoundOutput(punter, output, &punter_state.prev_move, &punter_state.state) != kOk) {
       punter_state.is_zombie = true;
-      punter_state.prev_move = Move::Pass();
+      punter_state.prev_move = Move::Pass(punter.Id());
       continue;
     }
 
