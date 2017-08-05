@@ -58,8 +58,11 @@ void OfflineClientProtocol::Send() {
     l_ready["ready"] = picojson::value((double)game.PunterID());
     if (game.Setting().Futures()) {
       assert(false);
-      // TODO implement
-      // l_read["futures"] = 
+      picojson::array l_futures = picojson::array();
+      for (const auto &future : player_futures) {
+        l_futures.emplace_back(future.SerializeJson());
+      }
+      l_ready["futures"] = picojson::value(l_futures);
     }
     l_ready["state"] = picojson::value(next_state);
     SendString(picojson::value(l_ready).serialize());

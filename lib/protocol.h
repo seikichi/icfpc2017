@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string>
 #include <vector>
+#include "future.h"
 #include "game.h"
 #include "score.h"
 
@@ -34,6 +35,7 @@ public:
     assert(phase == GamePhase::kHandshake);
     player_name = name;
   }
+  void SetFutures(const vector<::Future> &futures) { player_futures = futures; }
   void SetPlayerMove(const Move &move) { assert(phase == GamePhase::kGamePlay); player_move = move; }
   void SetState(const string &state) { assert(phase == GamePhase::kSetup || phase == GamePhase::kGamePlay); next_state = state; }
 
@@ -45,14 +47,17 @@ protected:
   void SendName();
 
   GamePhase phase = GamePhase::kHandshake;
-  std::string player_name;
+
   ::Game game;
   vector<::Move> other_moves;
   vector<::Score> scores;
-  Move player_move;
   string prev_state;
-  string next_state;
   double timeout;
+
+  std::string player_name = "YAGI";
+  vector<::Future> player_futures;
+  Move player_move;
+  string next_state;
 };
 
 class OfflineClientProtocol : public ClientProtocol {
