@@ -1,4 +1,5 @@
 #include "map.h"
+#include <assert.h>
 #include "strings.h"
 
 using namespace picojson;
@@ -16,8 +17,7 @@ bool Map::Deserialize(const picojson::object &json) {
     int id = (int)o.at("id").get<double>();
     int index = site_id_map.size();
     site_id_map[id] = index;
-    site_id_rev_map[index] = id;
-    sites.emplace_back(index);
+    sites.emplace_back(index, id);
   }
   const int n = site_id_map.size();
   graph = ::Graph(n);
@@ -38,8 +38,9 @@ bool Map::Deserialize(const picojson::object &json) {
   for (const value &v : l_mines) {
     // [SiteId]
     int id = (int)v.get<double>();
-    id = site_id_map[id];
-    sites[id].setMine(true);
+    int index = site_id_map[id];
+    sites[index].setMine(true);
+    assert(id == sites[index].original_id);
   }
   InitDists();
   return true;
@@ -54,18 +55,18 @@ picojson::object Map::SerializeJson() const {
   picojson::array l_sites, l_rivers, l_mines;
   for (const auto &site : sites) {
     picojson::object l_site;
-    l_site["id"] = value((double)site_id_rev_map.at(site.id));
+    l_site["id"] = value((double)site.original_id);
     l_sites.push_back(value(l_site));
     if (site.is_mine) {
-      l_mines.push_back(value((double)site_id_rev_map.at(site.id)));
+      l_mines.push_back(value((double)site.original_id));
     }
   }
   for (const auto &es : graph) {
     for (const auto &e : es) {
       if (e.src >= e.dest) { continue; }
       picojson::object l_river;
-      l_river["source"] = value((double)site_id_rev_map.at(e.src));
-      l_river["target"] = value((double)site_id_rev_map.at(e.dest));
+      l_river["source"] = value((double)sites[e.src].original_id);
+      l_river["target"] = value((double)sites[e.dest].original_id);
       l_rivers.push_back(value(l_river));
     }
   }
