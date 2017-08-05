@@ -23,4 +23,3 @@ struct Random {
   double next(double r) { return (double)Xor128() / 0xffffffff * r; }
   double next(double l, double r) { return next(r - l) + l; }
 };
-Random rnd;
