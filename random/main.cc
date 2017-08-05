@@ -39,7 +39,7 @@ int main(int, char**) {
     }
 
     Random rand(time(NULL));
-    auto edge = candidates[rand.next(0, candidates.size())];
+    auto edge = candidates[rand.next(0, candidates.size() - 1)];
 
     auto src = sites[edge.src].original_id;
     auto dest = sites[edge.dest].original_id;
