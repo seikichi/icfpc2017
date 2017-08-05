@@ -1,4 +1,4 @@
-TARGET = pass
+TARGET = punter
 
 CXX = g++
 

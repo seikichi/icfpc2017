@@ -1,4 +1,4 @@
-TARGET = greedy
+TARGET = punter
 
 CXX = g++
 

@@ -1,4 +1,4 @@
-TARGET = ai
+TARGET = punter
 
 CXX = g++
 
