@@ -17,7 +17,7 @@ GamePhase OfflineClientProtocol::Receive() {
     game.Deserialize(json);
   } else if (json.count("move")) {
     phase = GamePhase::kGamePlay;
-    const auto &l_moves = json.at("moves").get<picojson::array>();
+    const auto &l_moves = json.at("move").get<picojson::object>().at("moves").get<picojson::array>();
     for (const value &v : l_moves) {
       const auto &o = v.get<object>();
       other_moves.emplace_back(Move::Deserialize(o));
@@ -74,29 +74,12 @@ void OfflineClientProtocol::Send() {
 
 string OfflineClientProtocol::ReceiveString() {
   char buffer[10000];
-  int json_len = -1;
-  while (true) {
-    int size = fread(buffer, sizeof(buffer) - 1, 1, stdin);
-    if (size < 0) {
-      fprintf(stderr, "Read Error: %s\n", strerror(errno));
-      exit(1);
-    }
-    assert(size != 0);
-    buffer[size] = 0;
-    receive_buffer += string(buffer);
-    if (json_len == -1) {
-      int pos = receive_buffer.find(":");
-      if (pos == (int)string::npos) { continue; }
-      string len_str = receive_buffer.substr(0, pos);
-      receive_buffer = receive_buffer.substr(pos + 1);
-      json_len = stoi(len_str);
-    }
-    if ((int)receive_buffer.size() >= json_len) {
-      string json_str = receive_buffer.substr(0, json_len);
-      receive_buffer = receive_buffer.substr(json_len);
-      return json_str;
-    }
-  }
+  int json_size;
+  char c;
+  scanf("%d%c", &json_size, &c);
+  int size = fread(buffer, sizeof(char), json_size, stdin);
+  buffer[size] = 0;
+  return string(buffer);
 }
 
 void OfflineClientProtocol::SendString(const string &str) {
