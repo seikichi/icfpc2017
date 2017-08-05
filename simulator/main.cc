@@ -66,10 +66,6 @@ PunterState ParseSetupOutput(const Punter& p, const string& output) {
   return { 0, false, state, Move::Pass(p.Id()) };
 }
 
-Handshake(Process* process) {
-  message = process->ReadMessage();
-}
-
 vector<PunterState> Setup(const vector<Punter>& punters, const Map& map, bool prettify) {
 
   vector<PunterState> states;
