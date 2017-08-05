@@ -53,17 +53,32 @@ int main(int, char**) {
       }
     }
 
-    int64_t max_score = -1;
-    Move best_move;
-
     int punter_id = game.PunterID();
+
+    int64_t max_score = -1;
+    Move best_move = Move::Pass(punter_id);
+
+    vector<bool> connected(game.Map().Sites().size());
 
     for (auto& edges : game.Map().Graph()) {
       for (auto& edge : edges) {
-        if (map_state.Claimer(edge.src) != punter_id &&
-            map_state.Claimer(edge.dest) != punter_id &&
-            !game.Map().Sites()[edge.src].is_mine &&
-            !game.Map().Sites()[edge.dest].is_mine) {
+        if (map_state.Claimer(edge.id) == punter_id) {
+          connected[edge.src] = true;
+          connected[edge.dest] = true;
+        }
+      }
+    }
+
+
+    for (auto& edges : game.Map().Graph()) {
+      for (auto& edge : edges) {
+        if (map_state.Claimer(edge.id) != -1) {
+          continue;
+        }
+        if (!game.Map().Sites()[edge.src].is_mine &&
+            !game.Map().Sites()[edge.dest].is_mine &&
+            !connected[edge.src] &&
+            !connected[edge.dest]) {
           continue;
         }
 
