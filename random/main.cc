@@ -1,7 +1,9 @@
 #include <iostream>
+
 #include <unordered_set>
 #include <memory>
 #include <ctime>
+#include <random>
 #include "protocol.h"
 #include "random.h"
 
@@ -39,8 +41,10 @@ int main(int, char**) {
       }
     }
 
-    Random rand(time(NULL));
-    auto edge = candidates[rand.next(0, candidates.size() - 1)];
+    std::uniform_int_distribution<unsigned int> dist(0, 1 << 30);
+    std::random_device urandom("/dev/urandom");
+    Random rand(dist(urandom));
+    auto edge = candidates[rand.next((int)candidates.size())];
 
     auto src = sites[edge.src].original_id;
     auto dest = sites[edge.dest].original_id;
