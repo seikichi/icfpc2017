@@ -30,7 +30,7 @@ pipeline {
 
   post {
     failure {
-      slackSend(color: 'danger', message: "BUILD FAILED <${env.BUILD_URL}console|Jenkins Console>")
+      slackSend(color: 'danger', message: "BUILD FAILED <${env.BUILD_URL}console|Jenkins Console> (author: ${env.CHANGE_AUTHOR})")
     }
   }
 }
