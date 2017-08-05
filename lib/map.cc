@@ -1,17 +1,10 @@
 #include "map.h"
+#include "strings.h"
 
 using namespace picojson;
 
 bool Map::Deserialize(const string &json) {
-  value v;
-  string err = parse(v, json);
-  if (!err.empty()) {
-    cerr << err << endl;
-    return false;
-  }
-
-  auto o = v.get<object>();
-  return Deserialize(o);
+  return Deserialize(StringToJson(json));
 }
 bool Map::Deserialize(const picojson::object &json) {
   Clear();
