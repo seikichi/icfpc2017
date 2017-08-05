@@ -35,6 +35,8 @@ int main(int, char**) {
     MapState initial_map_state(game.Map());
     protocol->SetState(MakeState(game, initial_map_state));
 
+    cerr << "Send" << endl;
+    protocol->Send();
   } else if (protocol->Phase() == GamePhase::kGamePlay) {
     cerr << "GamePlay: state = " << protocol->State() << endl;
 
@@ -85,14 +87,14 @@ int main(int, char**) {
 
     protocol->SetState(MakeState(game, map_state));
 
+    cerr << "Send" << endl;
+    protocol->Send();
   } else if (protocol->Phase() == GamePhase::kScoring) {
     cerr << "Scoring" << endl;
     for (auto score : protocol->Scores()) {
       cerr << "PunterID = " << score.PunterID() << ", Score = " << score.Get() << endl;
     }
   }
-  cerr << "Send" << endl;
-  protocol->Send();
 
   return 0;
 }
