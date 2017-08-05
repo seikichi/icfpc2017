@@ -2,6 +2,7 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include <sys/types.h>
 
 enum class SpawnResult {
   kSuccess = 0,
