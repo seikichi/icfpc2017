@@ -3,6 +3,7 @@
 #include "picojson.h"
 
 #include "map.h"
+#include "setting.h"
 using namespace std;
 
 class Game {
@@ -14,11 +15,14 @@ public:
     punter_id = -1;
     punter_num = -1;
     map.Clear();
+    setting.Clear();
   }
 
   int PunterID() const { return punter_id; }
   int PunterNum() const { return punter_num; }
   const ::Map &Map() const { return map; }
+  const ::Setting &Setting() const { return setting; }
+
   bool Deserialize(const string &json);
   bool Deserialize(const picojson::object &json);
   std::string SerializeString(bool prettify = false) const;
@@ -27,4 +31,5 @@ private:
   int punter_id;
   int punter_num;
   ::Map map;
+  ::Setting setting;
 };
