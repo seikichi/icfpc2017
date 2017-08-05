@@ -36,7 +36,8 @@ GamePhase OfflineClientProtocol::Receive() {
       const auto &o = v.get<object>();
       scores.emplace_back(Score(o));
     }
-    prev_state = json.at("state").get<string>();
+    // NOTE: lamduct (official server?) does not return `state` property
+    // prev_state = json.at("state").get<string>();
   } else if (json.count("timeot")) {
     phase = GamePhase::kTimeOut;
     timeout = json.at("timeout").get<double>();
