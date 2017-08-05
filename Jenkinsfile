@@ -4,7 +4,12 @@ def ai = [
   'pass',
   'random',
   'greedy',
-]
+].collectEntries {
+  dir(it) {
+    sh 'make clean'
+    sh 'make'
+  }
+}
 
 pipeline {
   agent any
@@ -37,14 +42,7 @@ pipeline {
 
     stage('ai') {
       steps {
-        script {
-          for (int i = 0; i < ai.size(); ++i){
-            dir(ai[i]) {
-              sh 'make clean'
-              sh 'make'
-            }
-          }
-        }
+        parallel(ai)
       }
     }
   }
