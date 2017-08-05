@@ -35,12 +35,14 @@ pipeline {
       }
     }
 
-    for (def ai : list) {
-      stage("ai:${it}") {
-        steps {
-          dir(it) {
-            sh 'make clean'
-            sh 'make test'
+    script {
+      for (def ai : list) {
+        stage("ai:${it}") {
+          steps {
+            dir(it) {
+              sh 'make clean'
+              sh 'make'
+            }
           }
         }
       }
