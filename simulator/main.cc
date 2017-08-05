@@ -88,27 +88,35 @@ vector<PunterState> Setup(const vector<Punter>& punters, const Map& map, bool pr
   return states;
 }
 
-pair<Move, string> ParseRoundOutput(const Punter& punter, const string& output) {
+Error ParseRoundOutput(
+    const Punter& punter,
+    const string& output,
+    /* out */ Move* move,
+    /* out */ string* state) {
+
   picojson::value v;
   string err = picojson::parse(v, output);
   if (!err.empty()) {
     fprintf(stderr, "Punter %d returned invalid JSON: %s: %s\n", punter.Id(), err.c_str(), output.c_str());
-    return make_pair(Move::Pass(), "");
+    return kBad;
   }
 
   auto o = v.get<picojson::object>();
-  return make_pair(Move::Deserialize(o), o.at("state").get<string>());
+  *move = Move::Deserialize(o);
+  *state = o.at("state").get<string>();
+  return kOk;
 }
 
-vector<PunterState> DoRound(
+void DoRound(
     const vector<Punter>& punters,
-    vector<PunterState> states,
-    const Map&,
-    bool prettify) {
+    const Map& map,
+    bool prettify,
+    /* inout */ vector<PunterState>* punter_states,
+    /* inout */ MapState* map_state) {
 
   picojson::array moves;
-  for (int i = 0; i < (int)states.size(); ++i) {
-    auto v = picojson::value(states[i].prev_move.SerializeJson(i));
+  for (int i = 0; i < (int)punter_states->size(); ++i) {
+    auto v = picojson::value((*punter_states)[i].prev_move.SerializeJson(i));
     moves.push_back(v);
   }
 
@@ -118,49 +126,62 @@ vector<PunterState> DoRound(
 
   for (int i = 0; i < (int)punters.size(); ++i) {
     const Punter& punter = punters[i];
-    PunterState& state = states[i];
+    PunterState& punter_state = (*punter_states)[i];
 
-    if (state.is_zombie)
+    if (punter_state.is_zombie) {
+      fprintf(stderr, "Punter %d is zombie.\n", punter.Id());
       continue;
+    }
 
     picojson::object j = j_move;
-    j["state"] = picojson::value(state.state);
+    j["state"] = picojson::value(punter_state.state);
     string input = picojson::value(j).serialize(prettify);
     string output;
 
     auto r = Spawn({punter.Path()}, input, GAMEPLAY_TIMEOUT_MS, &output);
-    if (r == SpawnResult::kSuccess) {
-      auto p = ParseRoundOutput(punter, output);
-      state.prev_move = move(p.first);
-      state.state = move(p.second);
-      state.n_consecutive_timeout = 0;
-      cout << punter << ": " << state.prev_move << "\n";
-    } else if (r == SpawnResult::kExecutionFailure || r == SpawnResult::kTimeout) {
-      state.n_consecutive_timeout++;
-      state.prev_move = Move::Pass();
-      if (state.n_consecutive_timeout == MAX_CONSECUTIVE_TIMEOUT) {
-        state.is_zombie = true;
+    if (r == SpawnResult::kExecutionFailure || r == SpawnResult::kTimeout) {
+      punter_state.n_consecutive_timeout++;
+      punter_state.prev_move = Move::Pass();
+      if (punter_state.n_consecutive_timeout == MAX_CONSECUTIVE_TIMEOUT) {
+        punter_state.is_zombie = true;
       }
-    } else {
-      assert(false);
+      continue;
     }
-  }
 
-  return states;
+    if (ParseRoundOutput(punter, output, &punter_state.prev_move, &punter_state.state) != kOk) {
+      punter_state.is_zombie = true;
+      punter_state.prev_move = Move::Pass();
+      continue;
+    }
+
+    if (map_state->ApplyMove(map, punter.Id(), punter_state.prev_move) != kOk) {
+      punter_state.is_zombie = true;
+      continue;
+    }
+
+    punter_state.n_consecutive_timeout = 0;
+    cout << punter << ": " << punter_state.prev_move << "\n";
+  }
 }
 
-vector<PunterState> DoGame(
+void DoGame(
     const vector<Punter>& punters,
-    vector<PunterState> states,
     const Map& map,
-    bool prettify) {
+    bool prettify,
+    /* inout */ vector<PunterState>* punter_states,
+    /* inout */ MapState* map_state) {
 
-  int n_rounds = map.Graph().size();
+  int n_rounds = 0;
+  for (const auto& es : map.Graph()) {
+    n_rounds += (int)es.size();
+  }
+  assert(n_rounds % 2 == 0);
+  n_rounds /= 2;
+
   for (int round = 0; round < n_rounds; ++round) {
     cout << "[[[[[ Round #" << round << " ]]]]]\n";
-    states = DoRound(punters, move(states), map, prettify);
+    DoRound(punters, map, prettify, punter_states, map_state);
   }
-  return states;
 }
 
 int main(int argc, char** argv) {
@@ -187,8 +208,10 @@ int main(int argc, char** argv) {
   auto states = Setup(punters, map, false);
   cout << "Initial State: " << states << endl;
 
-  states = DoGame(punters, states, map, false);
+  MapState map_state(map);
+  DoGame(punters, map, false, &states, &map_state);
   cout << "Last State: " << states << endl;
+  cout << "Map State: " << map_state << endl;
 
   return 0;
 }

@@ -1,6 +1,7 @@
 #include "map.h"
 #include <assert.h>
 #include "strings.h"
+#include "cout.h"
 
 using namespace picojson;
 
@@ -94,4 +95,32 @@ void Map::InitDists() {
       }
     }
   }
+}
+
+Error MapState::ApplyMove(const Map& map, int punter_id, Move move) {
+  if (move.Type() == MoveType::kClaim) {
+    int src = map.SiteID(move.Source());
+    int dest = map.SiteID(move.Target());
+    for (const Edge& e : map.Graph()[src]) {
+      if (e.dest == dest) {
+        if (edge2pid[e.id] != -1) {
+          fprintf(stderr, "Punter %d claimed river (%d -> %d), but it already claimed by punter %d.\n",
+                  punter_id, src, dest, edge2pid[e.id]);
+          return kBad;
+        }
+        edge2pid[e.id] = punter_id;
+        return kOk;
+      }
+    }
+    fprintf(stderr, "Punter %d claimed river (%d -> %d), but there are no such rivers.\n",
+            punter_id, src, dest);
+    return kBad;
+  } else {
+    return kOk;
+  }
+}
+
+ostream& operator<<(ostream& stream, const MapState& map_state) {
+  stream << "MapState( edge2pid = " << map_state.edge2pid << " )";
+  return stream;
 }

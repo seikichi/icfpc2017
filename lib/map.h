@@ -1,9 +1,12 @@
 #pragma once
 #include <map>
+#include <iostream>
 #include "picojson.h"
 
 #include "graph.h"
 #include "site.h"
+#include "error.h"
+#include "move.h"
 using namespace std;
 
 class Map {
@@ -36,3 +39,33 @@ private:
   map<int, int> site_id_map;
   vector<vector<int>> dists;
 };
+
+class MapState {
+public:
+  explicit MapState(const Map& map) { Clear(map); }
+
+  void Clear(const Map& map) {
+    size_t n_edges = 0;
+    for (const auto& es : map.Graph()) {
+      n_edges += es.size();
+    }
+    n_edges /= 2;
+
+    edge2pid.resize(n_edges, -1);
+  }
+
+  Error ApplyMove(const Map& map, int punter_id, Move move);
+
+  // Get the id of the punter who claimed the specified eedge.
+  // If no punters claimed the edge, returns -1.
+  int Claimer(int edge_id) const {
+    return edge2pid[edge_id];
+  }
+
+private:
+  vector<int> edge2pid;
+
+  friend ostream& operator<<(ostream& stream, const MapState& map_state);
+};
+
+ostream& operator<<(ostream& stream, const MapState& map_state);
