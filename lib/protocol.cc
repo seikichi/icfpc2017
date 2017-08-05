@@ -88,7 +88,7 @@ string OfflineClientProtocol::ReceiveString() {
 }
 
 void OfflineClientProtocol::SendString(const string &str) {
-  printf("%s\n", str.c_str());
+  printf("%lu:%s\n", str.size(), str.c_str());
 }
 
 void ClientProtocol::ReceiveName() {
