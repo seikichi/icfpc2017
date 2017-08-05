@@ -38,8 +38,8 @@ pipeline {
     stage('ai:make') {
       steps {
         script {
-          for (def ai : list) {
-            dir(it) {
+          for (int i = 0; i < list.size(); ++i){
+            dir(list[i]) {
               sh 'make clean'
               sh 'make'
             }
