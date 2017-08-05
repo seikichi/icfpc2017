@@ -197,6 +197,7 @@ void DoScoring(
     auto p = SpawnProcess({punter.Path()});
     if (!p)
       goto error;
+    Handshake(p.get());
     if (p->WriteMessage(input, GAMEPLAY_TIMEOUT_MS) != SpawnResult::kSuccess)
       goto error;
     p->CloseStdin();
