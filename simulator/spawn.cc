@@ -1,5 +1,6 @@
 #include "spawn.h"
 #include "strings.h"
+#include <algorithm>
 #include <cassert>
 #include <condition_variable>
 #include <signal.h>
@@ -238,7 +239,6 @@ SpawnResult Process::WriteMessage(const string& json, int timeout_millis) {
     }
     fwrite(message.c_str(), 1, message.size(), f);
     fclose(f);
-    close(stdin_fd);
 
     {
       unique_lock<mutex> lock(mtx);
@@ -278,7 +278,8 @@ SpawnResult Process::ReadMessage(int timeout_millis, /* out */ string* message) 
     string s = captured;
     for (;;) {
       char buffer[4096];
-      ssize_t n = read(stdout_fd, buffer, sizeof(buffer));
+      int len = (message_length == -1) ? sizeof(buffer) : min(message_length - (int)s.size(), (int)sizeof(buffer));
+      ssize_t n = read(stdout_fd, buffer, len);
       if (n == 0)
         break;
       if (n == -1) {
@@ -292,7 +293,8 @@ SpawnResult Process::ReadMessage(int timeout_millis, /* out */ string* message) 
           message_length = stoi(s.substr(0, colon_index));
           s = s.substr(colon_index + 1);
         }
-      } else if ((int)s.size() >= message_length) {
+      }
+      if (message_length != -1 && (int)s.size() >= message_length) {
         break;
       }
     }

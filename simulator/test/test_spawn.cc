@@ -59,14 +59,14 @@ TEST(SpawnProcess, ReadTimeout) {
 }
 
 TEST(SpawnProcess, Large) {
-  auto p = SpawnProcess({"cat"});
+  auto p = SpawnProcess({"sponge"});
 
   string input(32*1024*1024, 'x');
-  auto r1 = p->WriteMessage(input, 1000);
+  auto r1 = p->WriteMessage(input, 10000);
   ASSERT_EQ(r1, SpawnResult::kSuccess);
 
   string output;
-  auto r2 = p->ReadMessage(1000, &output);
+  auto r2 = p->ReadMessage(10000, &output);
   ASSERT_EQ(r2, SpawnResult::kSuccess);
   ASSERT_EQ(output, input);
 }
