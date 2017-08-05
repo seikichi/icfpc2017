@@ -205,6 +205,8 @@ void DoScoring(
 error:
     /* do nothing */;
   }
+
+  cout << "Final Scores: " << picojson::value(scores).serialize() << endl;
 }
 
 
