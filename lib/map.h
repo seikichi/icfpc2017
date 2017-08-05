@@ -54,7 +54,7 @@ public:
     edge2pid.resize(n_edges, -1);
   }
 
-  Error ApplyMove(const Map& map, Move move);
+  Error ApplyMove(const Map& map, Move move, bool verbose=false);
 
   // Get the id of the punter who claimed the specified eedge.
   // If no punters claimed the edge, returns -1.
