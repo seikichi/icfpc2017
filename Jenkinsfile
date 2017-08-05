@@ -13,7 +13,6 @@ pipeline {
     stage('lib') {
       steps {
         dir('lib') {
-          sh 'make'
           sh 'make test'
         }
       }
