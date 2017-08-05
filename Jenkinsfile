@@ -1,6 +1,6 @@
 #!groovy
 
-def list = [
+def ai = [
   'pass',
   'random',
   'greedy',
@@ -35,11 +35,11 @@ pipeline {
       }
     }
 
-    stage('ai:make') {
+    stage('ai') {
       steps {
         script {
-          for (int i = 0; i < list.size(); ++i){
-            dir(list[i]) {
+          for (int i = 0; i < ai.size(); ++i){
+            dir(ai[i]) {
               sh 'make clean'
               sh 'make'
             }
