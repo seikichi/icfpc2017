@@ -136,56 +136,53 @@ picojson::array MakeMovesJson(const vector<PunterState>& punter_states) {
 }
 
 void DoRound(
-    const vector<Punter>& punters,
+    const Punter& punter,
     const Map& map,
     bool prettify,
     /* inout */ vector<PunterState>* punter_states,
     /* inout */ MapState* map_state) {
 
-  for (int i = 0; i < (int)punters.size(); ++i) {
-    const Punter& punter = punters[i];
-    PunterState& punter_state = (*punter_states)[i];
+  PunterState& punter_state = (*punter_states)[punter.Id()];
 
-    if (punter_state.is_zombie) {
-      fprintf(stderr, "Punter %d is zombie.\n", punter.Id());
-      continue;
-    }
+  if (punter_state.is_zombie) {
+    fprintf(stderr, "Punter %d is zombie.\n", punter.Id());
+    return;
+  }
 
-    picojson::object j_moves, j_move;
-    auto a_moves = MakeMovesJson(*punter_states);
-    j_moves["moves"] = picojson::value(a_moves);
-    j_move["move"] = picojson::value(j_moves);
+  picojson::object j_moves, j_move;
+  auto a_moves = MakeMovesJson(*punter_states);
+  j_moves["moves"] = picojson::value(a_moves);
+  j_move["move"] = picojson::value(j_moves);
 
-    picojson::object j = j_move;
-    j["state"] = picojson::value(punter_state.state);
-    string input = picojson::value(j).serialize(prettify);
-    string output;
+  picojson::object j = j_move;
+  j["state"] = picojson::value(punter_state.state);
+  string input = picojson::value(j).serialize(prettify);
+  string output;
 
-    auto p = SpawnProcess({punter.Path()});
-    if (p == nullptr)
-      goto error;
+  auto p = SpawnProcess({punter.Path()});
+  if (p == nullptr)
+    goto error;
 
-    Handshake(p.get());
+  Handshake(p.get());
 
-    if (p->WriteMessage(input, GAMEPLAY_TIMEOUT_MS) != SpawnResult::kSuccess)
-      goto error;
-    p->CloseStdin();
-    if (p->ReadMessage(GAMEPLAY_TIMEOUT_MS, &output) != SpawnResult::kSuccess)
-      goto error;
-    if (ParseRoundOutput(punter, output, &punter_state.prev_move, &punter_state.state) != kOk)
-      goto error;
-    if (map_state->ApplyMove(map, punter.Id(), punter_state.prev_move) != kOk)
-      goto error;
-    punter_state.n_consecutive_timeout = 0;
-    cout << punter << ": " << punter_state.prev_move << "\n";
-    continue;
+  if (p->WriteMessage(input, GAMEPLAY_TIMEOUT_MS) != SpawnResult::kSuccess)
+    goto error;
+  p->CloseStdin();
+  if (p->ReadMessage(GAMEPLAY_TIMEOUT_MS, &output) != SpawnResult::kSuccess)
+    goto error;
+  if (ParseRoundOutput(punter, output, &punter_state.prev_move, &punter_state.state) != kOk)
+    goto error;
+  if (map_state->ApplyMove(map, punter.Id(), punter_state.prev_move) != kOk)
+    goto error;
+  punter_state.n_consecutive_timeout = 0;
+  cout << punter << ": " << punter_state.prev_move << "\n";
+  return;
 
 error:
-    punter_state.n_consecutive_timeout++;
-    punter_state.prev_move = Move::Pass(punter.Id());
-    if (punter_state.n_consecutive_timeout == MAX_CONSECUTIVE_TIMEOUT) {
-      punter_state.is_zombie = true;
-    }
+  punter_state.n_consecutive_timeout++;
+  punter_state.prev_move = Move::Pass(punter.Id());
+  if (punter_state.n_consecutive_timeout == MAX_CONSECUTIVE_TIMEOUT) {
+    punter_state.is_zombie = true;
   }
 }
 
@@ -205,7 +202,8 @@ void DoGame(
 
   for (int round = 0; round < n_rounds; ++round) {
     cout << "[[[[[ Round #" << round << " ]]]]]\n";
-    DoRound(punters, map, prettify, punter_states, map_state);
+    const Punter& p = punters[round % punters.size()];
+    DoRound(p, map, prettify, punter_states, map_state);
   }
 }
 
