@@ -74,6 +74,7 @@ void OfflineClientProtocol::Send() {
 
 string OfflineClientProtocol::ReceiveString() {
   char buffer[10000];
+  int json_len = -1;
   while (true) {
     int size = fread(buffer, sizeof(buffer) - 1, 1, stdin);
     if (size < 0) {
@@ -83,19 +84,18 @@ string OfflineClientProtocol::ReceiveString() {
     assert(size != 0);
     buffer[size] = 0;
     receive_buffer += string(buffer);
-    if (phase == GamePhase::kHandshake) {
-      int pos = receive_buffer.find("}");
-      if (receive_buffer.find("}") == string::npos) { goto next; }
-      string handshake_str = receive_buffer.substr(0, pos);
-      receive_buffer = receive_buffer.substr(pos);
-      return handshake_str;
-    } else {
-      picojson::value v;
-      string err = picojson::parse(v, receive_buffer);
-      if (!err.empty()) { goto next; }
-      return receive_buffer;
+    if (json_len == -1) {
+      int pos = receive_buffer.find(":");
+      if (pos == (int)string::npos) { continue; }
+      string len_str = receive_buffer.substr(0, pos);
+      receive_buffer = receive_buffer.substr(pos + 1);
+      json_len = stoi(len_str);
     }
-next:;
+    if ((int)receive_buffer.size() >= json_len) {
+      string json_str = receive_buffer.substr(0, json_len);
+      receive_buffer = receive_buffer.substr(json_len);
+      return json_str;
+    }
   }
 }
 
