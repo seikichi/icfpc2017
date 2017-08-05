@@ -18,8 +18,8 @@ struct Random {
   }
   int next(int r) { return Xor128() % r; }
   int next(int l, int r) { return next(r - l + 1) + l; }
-  ll next(ll r) { return (ll)((((unsigned long long)Xor128() << 32) + (unsigned long long)Xor128()) % r); }
-  ll next(ll l, ll r) { return next(r - l + 1) + l; }
+  int64_t next(int64_t r) { return (int64_t)((((unsigned long long)Xor128() << 32) + (unsigned long long)Xor128()) % r); }
+  int64_t next(int64_t l, int64_t r) { return next(r - l + 1) + l; }
   double next(double r) { return (double)Xor128() / 0xffffffff * r; }
   double next(double l, double r) { return next(r - l) + l; }
 };
