@@ -94,6 +94,7 @@ vector<PunterState> Setup(const vector<Punter>& punters, const Map& map, bool pr
       states.push_back({ 1, false, "", Move::Pass(p.Id()) });
       continue;
     }
+    process->CloseStdin();
     string output;
     if (process->ReadMessage(SETUP_TIMEOUT_MS, &output) != SpawnResult::kSuccess) {
       states.push_back({ 1, false, "", Move::Pass(p.Id()) });
@@ -168,6 +169,7 @@ void DoRound(
 
     if (p->WriteMessage(input, GAMEPLAY_TIMEOUT_MS) != SpawnResult::kSuccess)
       goto error;
+    p->CloseStdin();
     if (p->ReadMessage(GAMEPLAY_TIMEOUT_MS, &output) != SpawnResult::kSuccess)
       goto error;
     if (ParseRoundOutput(punter, output, &punter_state.prev_move, &punter_state.state) != kOk)
@@ -285,6 +287,7 @@ void DoScoring(
       goto error;
     if (p->WriteMessage(input, GAMEPLAY_TIMEOUT_MS) != SpawnResult::kSuccess)
       goto error;
+    p->CloseStdin();
     continue;
 
 error:
