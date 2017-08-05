@@ -54,13 +54,16 @@ public:
     edge2pid.resize(n_edges, -1);
   }
 
-  Error ApplyMove(const Map& map, int punter_id, Move move);
+  Error ApplyMove(const Map& map, Move move);
 
   // Get the id of the punter who claimed the specified eedge.
   // If no punters claimed the edge, returns -1.
   int Claimer(int edge_id) const {
     return edge2pid[edge_id];
   }
+
+  picojson::object SerializeJson() const;
+  void Deserialize(const picojson::object& json);
 
 private:
   vector<int> edge2pid;

@@ -10,6 +10,7 @@
 #include "cout.h"
 #include "score.h"
 #include "scoring.h"
+#include "punter.h"
 using namespace std;
 
 int HANDSHAKE_TIMEOUT_MS = 1000;
@@ -134,7 +135,7 @@ void DoRound(
     goto error;
   if (ParseRoundOutput(punter, output, &punter_state.prev_move, &punter_state.state) != kOk)
     goto error;
-  if (map_state->ApplyMove(map, punter.Id(), punter_state.prev_move) != kOk)
+  if (map_state->ApplyMove(map, punter_state.prev_move) != kOk)
     goto error;
   cout << punter << ": " << punter_state.prev_move << "\n";
   return;
@@ -176,7 +177,7 @@ void DoScoring(
 
   picojson::array scores;
   for (const auto& punter : punters) {
-    int64_t s = ScorePunter(punter, map, map_state);
+    int64_t s = ScorePunter(punter.Id(), map, map_state);
     Score score(punter.Id(), s);
     scores.push_back(picojson::value(score.SerializeJson()));
   }

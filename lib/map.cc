@@ -97,23 +97,25 @@ void Map::InitDists() {
   }
 }
 
-Error MapState::ApplyMove(const Map& map, int punter_id, Move move) {
+Error MapState::ApplyMove(const Map& map, Move move) {
   if (move.Type() == MoveType::kClaim) {
     int src = map.SiteID(move.Source());
     int dest = map.SiteID(move.Target());
     for (const Edge& e : map.Graph()[src]) {
       if (e.dest == dest) {
         if (edge2pid[e.id] != -1) {
+          /*
           fprintf(stderr, "Punter %d claimed river (%d -> %d), but it already claimed by punter %d.\n",
-                  punter_id, src, dest, edge2pid[e.id]);
+                  move.PunterID(), src, dest, edge2pid[e.id]);
+          */
           return kBad;
         }
-        edge2pid[e.id] = punter_id;
+        edge2pid[e.id] = move.PunterID();
         return kOk;
       }
     }
     fprintf(stderr, "Punter %d claimed river (%d -> %d), but there are no such rivers.\n",
-            punter_id, src, dest);
+            move.PunterID(), src, dest);
     return kBad;
   } else {
     return kOk;
@@ -123,4 +125,28 @@ Error MapState::ApplyMove(const Map& map, int punter_id, Move move) {
 ostream& operator<<(ostream& stream, const MapState& map_state) {
   stream << "MapState( edge2pid = " << map_state.edge2pid << " )";
   return stream;
+}
+
+picojson::array IntVectorToJson(const std::vector<int>& v) {
+  picojson::array a;
+  for (auto& e : v) {
+    a.push_back(picojson::value((double)e));
+  }
+  return a;
+}
+
+picojson::object MapState::SerializeJson() const {
+  auto a = IntVectorToJson(edge2pid);
+
+  picojson::object o;
+  o["edge2pid"] = picojson::value(a);
+
+  return o;
+}
+
+void MapState::Deserialize(const picojson::object& json) {
+  edge2pid.clear();
+  for (auto& e : json.at("edge2pid").get<picojson::array>()) {
+    edge2pid.push_back(e.get<double>());
+  }
 }

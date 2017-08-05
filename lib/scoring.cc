@@ -35,7 +35,7 @@ int64_t ScoreMine(
 }
 
 int64_t ScorePunter(
-    const Punter& punter,
+    const int punter_id,
     const Map& map,
     const MapState& map_state) {
 
@@ -43,7 +43,7 @@ int64_t ScorePunter(
   for (const auto& site : map.Sites()) {
     if (!site.is_mine)
       continue;
-    score += ScoreMine(site.id, punter.Id(), map, map_state);
+    score += ScoreMine(site.id, punter_id, map, map_state);
   }
   return score;
 }
