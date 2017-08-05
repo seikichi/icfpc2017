@@ -49,6 +49,8 @@ GamePhase OfflineClientProtocol::Receive() {
 
 void OfflineClientProtocol::Send() {
   if (phase == GamePhase::kHandshake) {
+    assert(false);
+    // Receiveの方で勝手にやる
     SendName();
   } else if (phase == GamePhase::kSetup) {
     assert(next_state != "");
@@ -63,6 +65,7 @@ void OfflineClientProtocol::Send() {
     SendString(picojson::value(l_ready).serialize());
   } else if (phase == GamePhase::kGamePlay) {
     assert(next_state != "");
+    assert(player_move.PunterID() == game.PunterID());
     picojson::object l_move;
     l_move["move"] = picojson::value(player_move.SerializeJson());
     l_move["state"] = picojson::value(next_state);
@@ -73,10 +76,12 @@ void OfflineClientProtocol::Send() {
 }
 
 string OfflineClientProtocol::ReceiveString() {
-  char buffer[10000];
+  // TODO 1GBの入力に対応させる
+  char buffer[100000];
   int json_size;
   char c;
-  scanf("%d%c", &json_size, &c);
+  int v = scanf("%d%c", &json_size, &c);
+  assert(v == 2);
   int size = fread(buffer, sizeof(char), json_size, stdin);
   buffer[size] = 0;
   return string(buffer);
@@ -88,14 +93,14 @@ void OfflineClientProtocol::SendString(const string &str) {
 
 void ClientProtocol::ReceiveName() {
   string str = ReceiveString();
-  picojson::object json = StringToJson(str);
-  string me = json.at("me").get<string>();
-  assert(me == player_name);
+  // picojson::object json = StringToJson(str);
+  // string you = json.at("you").get<string>();
+  // assert(you == player_name);
 }
 
 void ClientProtocol::SendName() {
   picojson::object l_name;
-  l_name["you"] = picojson::value(player_name);
+  l_name["me"] = picojson::value(player_name);
   string str = picojson::value(l_name).serialize();
   SendString(str);
 }

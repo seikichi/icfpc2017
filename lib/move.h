@@ -10,7 +10,7 @@ enum class MoveType {
 
 class Move {
 public:
-  Move() {}
+  Move() : type(MoveType::kPass), punter_id(-1), source(-1), target(-1) {;}
   static Move Claim(int punter_id, int source, int target) {
     return Move(MoveType::kClaim, punter_id, source, target);
   }

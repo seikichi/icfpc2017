@@ -32,7 +32,6 @@ public:
 
   void SetPlayerName(const string &name) {
     assert(phase == GamePhase::kHandshake);
-    assert(name.find("}") == string::npos);
     player_name = name;
   }
   void SetPlayerMove(const Move &move) { assert(phase == GamePhase::kGamePlay); player_move = move; }
@@ -44,10 +43,6 @@ protected:
 
   void ReceiveName();
   void SendName();
-  void ReceiveSetup();
-  void SendSetup();
-  void ReceiveScoring();
-  void SendScorng();
 
   GamePhase phase = GamePhase::kHandshake;
   std::string player_name;
