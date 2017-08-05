@@ -1,5 +1,11 @@
 #!groovy
 
+def list = [
+  'pass',
+  'random',
+  'greedy',
+]
+
 pipeline {
   agent any
 
@@ -29,7 +35,7 @@ pipeline {
       }
     }
 
-    ['pass', 'random', 'greedy'].each {
+    for (def ai : list) {
       stage("ai:${it}") {
         steps {
           dir(it) {
