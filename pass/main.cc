@@ -17,7 +17,7 @@ int main(int, char**) {
     cerr << game.SerializeString() << endl;
     protocol->SetState(game.SerializeString());
   } else if (protocol->Phase() == GamePhase::kGamePlay) {
-    cerr << "GamePlay" << endl;
+    cerr << "GamePlay: state = " << protocol->State() << endl;
     Game game;
     game.Deserialize(protocol->State());
     protocol->SetPlayerMove(Move::Pass(game.PunterID()));
@@ -25,7 +25,7 @@ int main(int, char**) {
   } else if (protocol->Phase() == GamePhase::kScoring) {
     cerr << "Scoring" << endl;
     for (auto score : protocol->Scores()) {
-      cerr << score.PunterID() << ":" << score.Get() << endl;
+      cerr << "PunterID = " << score.PunterID() << ", Score = " << score.Get() << endl;
     }
   }
   cerr << "Send" << endl;
