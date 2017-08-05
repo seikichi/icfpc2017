@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cstdio>
 #include <cstring>
+#include <getopt.h>
 #include <vector>
 #include <signal.h>
 #include "spawn.h"
@@ -13,6 +14,7 @@
 #include "punter.h"
 using namespace std;
 
+float timeout_ratio = 1.0;
 int HANDSHAKE_TIMEOUT_MS = 1000;
 int SETUP_TIMEOUT_MS = 10000;
 int GAMEPLAY_TIMEOUT_MS = 1000;
@@ -33,8 +35,8 @@ PunterState ParseSetupOutput(const Punter& p, const string& output) {
 
 void Handshake(Process* process) {
   string message;
-  process->ReadMessage(HANDSHAKE_TIMEOUT_MS, &message);
-  process->WriteMessage("{\"you\": \"example\"}", HANDSHAKE_TIMEOUT_MS);
+  process->ReadMessage(HANDSHAKE_TIMEOUT_MS * timeout_ratio, &message);
+  process->WriteMessage("{\"you\": \"example\"}", HANDSHAKE_TIMEOUT_MS * timeout_ratio);
 }
 
 PunterState SetupPunter(const Punter& p, int n_punters, const Map& map, bool prettify) {
@@ -50,12 +52,12 @@ PunterState SetupPunter(const Punter& p, int n_punters, const Map& map, bool pre
     }
 
     Handshake(process.get());
-    if (process->WriteMessage(input, SETUP_TIMEOUT_MS) != SpawnResult::kSuccess) {
+    if (process->WriteMessage(input, SETUP_TIMEOUT_MS * timeout_ratio) != SpawnResult::kSuccess) {
       return { 1, false, "", Move::Pass(p.Id()) };
     }
     process->CloseStdin();
     string output;
-    if (process->ReadMessage(SETUP_TIMEOUT_MS, &output) != SpawnResult::kSuccess) {
+    if (process->ReadMessage(SETUP_TIMEOUT_MS * timeout_ratio, &output) != SpawnResult::kSuccess) {
       return { 1, false, "", Move::Pass(p.Id()) };
     }
 
@@ -128,10 +130,10 @@ void DoRound(
 
   Handshake(p.get());
 
-  if (p->WriteMessage(input, GAMEPLAY_TIMEOUT_MS) != SpawnResult::kSuccess)
+  if (p->WriteMessage(input, GAMEPLAY_TIMEOUT_MS * timeout_ratio) != SpawnResult::kSuccess)
     goto error;
   p->CloseStdin();
-  if (p->ReadMessage(GAMEPLAY_TIMEOUT_MS, &output) != SpawnResult::kSuccess)
+  if (p->ReadMessage(GAMEPLAY_TIMEOUT_MS * timeout_ratio, &output) != SpawnResult::kSuccess)
     goto error;
   if (ParseRoundOutput(punter, output, &punter_state.prev_move, &punter_state.state) != kOk)
     goto error;
@@ -211,22 +213,37 @@ error:
   cout << "Final Scores: " << picojson::value(scores).serialize() << endl;
 }
 
+void usage(char** argv) {
+  fprintf(stderr, "Usage: %s [-t timeout_ratio] MAP PUNTER_0 PUNTER_1 ...\n", argv[0]);
+  exit(2);
+}
 
 int main(int argc, char** argv) {
-  if (argc <= 3) {
-    fprintf(stderr, "Usage: %s MAP PUNTER_0 PUNTER_1 ...\n", argv[0]);
-    exit(2);
+  int opt;
+  while ((opt = getopt(argc, argv, "ht:")) != -1) {
+    switch (opt) {
+      case 'h':
+        usage(argv);
+        break;
+      case 't':
+        timeout_ratio = atof(optarg);
+        break;
+      default: /* '?' */
+        usage(argv);
+    }
   }
+
+  if (argc - optind <= 2) { usage(argv); }
 
   // ignore SIGPIPE
   signal(SIGPIPE, SIG_IGN);
 
-  string map_json = ReadFileOrDie(argv[1]);
+  string map_json = ReadFileOrDie(argv[optind]);
   Map map(map_json);
 
   vector<Punter> punters;
-  for (int i = 0; i < argc-2; ++i) {
-    punters.push_back(Punter(i, argv[i+2]));
+  for (int i = 0; i < argc - optind - 1; ++i) {
+    punters.push_back(Punter(i, argv[optind + i + 1]));
   }
 
   for (auto& p : punters) {
