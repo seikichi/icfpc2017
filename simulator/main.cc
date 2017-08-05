@@ -11,6 +11,7 @@
 #include "score.h"
 using namespace std;
 
+int HANDSHAKE_TIMEOUT_MS = 1000;
 int SETUP_TIMEOUT_MS = 10000;
 int GAMEPLAY_TIMEOUT_MS = 1000;
 int MAX_CONSECUTIVE_TIMEOUT = 10;
@@ -66,6 +67,12 @@ PunterState ParseSetupOutput(const Punter& p, const string& output) {
   return { 0, false, state, Move::Pass(p.Id()) };
 }
 
+void Handshake(Process* process) {
+  string message;
+  process->ReadMessage(HANDSHAKE_TIMEOUT_MS, &message);
+  process->WriteMessage("{\"you\": \"example\"}", HANDSHAKE_TIMEOUT_MS);
+}
+
 vector<PunterState> Setup(const vector<Punter>& punters, const Map& map, bool prettify) {
 
   vector<PunterState> states;
@@ -75,15 +82,26 @@ vector<PunterState> Setup(const vector<Punter>& punters, const Map& map, bool pr
     j["punters"] = picojson::value((double)punters.size());
     j["map"] = picojson::value(map.SerializeJson());
     string input = picojson::value(j).serialize(prettify);
-    string output;
-    auto r = Spawn({p.Path()}, input, SETUP_TIMEOUT_MS, &output);
-    if (r == SpawnResult::kSuccess) {
-      states.push_back(ParseSetupOutput(p, output));
-    } else if (r == SpawnResult::kExecutionFailure || r == SpawnResult::kTimeout) {
+
+    auto process = SpawnProcess({p.Path()});
+    if (process == nullptr) {
       states.push_back({ 1, false, "", Move::Pass(p.Id()) });
-    } else {
-      assert(false);
+      continue;
     }
+
+    Handshake(process.get());
+    if (process->WriteMessage(input, SETUP_TIMEOUT_MS) != SpawnResult::kSuccess) {
+      states.push_back({ 1, false, "", Move::Pass(p.Id()) });
+      continue;
+    }
+    process->CloseStdin();
+    string output;
+    if (process->ReadMessage(SETUP_TIMEOUT_MS, &output) != SpawnResult::kSuccess) {
+      states.push_back({ 1, false, "", Move::Pass(p.Id()) });
+      continue;
+    }
+
+    states.push_back(ParseSetupOutput(p, output));
   }
 
   return states;
@@ -143,29 +161,31 @@ void DoRound(
     string input = picojson::value(j).serialize(prettify);
     string output;
 
-    auto r = Spawn({punter.Path()}, input, GAMEPLAY_TIMEOUT_MS, &output);
-    if (r == SpawnResult::kExecutionFailure || r == SpawnResult::kTimeout) {
-      punter_state.n_consecutive_timeout++;
-      punter_state.prev_move = Move::Pass(punter.Id());
-      if (punter_state.n_consecutive_timeout == MAX_CONSECUTIVE_TIMEOUT) {
-        punter_state.is_zombie = true;
-      }
-      continue;
-    }
+    auto p = SpawnProcess({punter.Path()});
+    if (p == nullptr)
+      goto error;
 
-    if (ParseRoundOutput(punter, output, &punter_state.prev_move, &punter_state.state) != kOk) {
-      punter_state.is_zombie = true;
-      punter_state.prev_move = Move::Pass(punter.Id());
-      continue;
-    }
+    Handshake(p.get());
 
-    if (map_state->ApplyMove(map, punter.Id(), punter_state.prev_move) != kOk) {
-      punter_state.is_zombie = true;
-      continue;
-    }
-
+    if (p->WriteMessage(input, GAMEPLAY_TIMEOUT_MS) != SpawnResult::kSuccess)
+      goto error;
+    p->CloseStdin();
+    if (p->ReadMessage(GAMEPLAY_TIMEOUT_MS, &output) != SpawnResult::kSuccess)
+      goto error;
+    if (ParseRoundOutput(punter, output, &punter_state.prev_move, &punter_state.state) != kOk)
+      goto error;
+    if (map_state->ApplyMove(map, punter.Id(), punter_state.prev_move) != kOk)
+      goto error;
     punter_state.n_consecutive_timeout = 0;
     cout << punter << ": " << punter_state.prev_move << "\n";
+    continue;
+
+error:
+    punter_state.n_consecutive_timeout++;
+    punter_state.prev_move = Move::Pass(punter.Id());
+    if (punter_state.n_consecutive_timeout == MAX_CONSECUTIVE_TIMEOUT) {
+      punter_state.is_zombie = true;
+    }
   }
 }
 
@@ -262,9 +282,16 @@ void DoScoring(
     j["state"] = picojson::value(state.state);
 
     string input = picojson::value(j).serialize();
-    string output;
-    Spawn({punter.Path()}, input, GAMEPLAY_TIMEOUT_MS, &output);
-    // ignore Spwan() result
+    auto p = SpawnProcess({punter.Path()});
+    if (!p)
+      goto error;
+    if (p->WriteMessage(input, GAMEPLAY_TIMEOUT_MS) != SpawnResult::kSuccess)
+      goto error;
+    p->CloseStdin();
+    continue;
+
+error:
+    /* do nothing */;
   }
 }
 

@@ -3,6 +3,7 @@
 #include <string>
 #include <memory>
 #include <sys/types.h>
+#include <unistd.h>
 
 enum class SpawnResult {
   kSuccess = 0,
@@ -27,6 +28,18 @@ public:
   SpawnResult WriteMessage(const std::string& json, int timeout_millis);
   SpawnResult ReadMessage(int timeout_millis, /*out*/ std::string* message);
   SpawnResult Wait(int timeout_millis);
+  void CloseStdin() {
+    if (stdin_fd != -1) {
+      close(stdin_fd);
+      stdin_fd = -1;
+    }
+  }
+  void CloseStdout() {
+    if (stdout_fd != -1) {
+      close(stdout_fd);
+      stdout_fd = -1;
+    }
+  }
   void Kill();
 
 private:

@@ -231,14 +231,17 @@ SpawnResult Process::WriteMessage(const string& json, int timeout_millis) {
   bool done = false;
 
   thread writer_thread([this, &message, &cv, &mtx, &done]() {
-    FILE* f = fdopen(stdin_fd, "wb");
-    if (f == nullptr) {
-      fprintf(stderr, "Failed to fdopen for write\n");
-      close(stdin_fd);
-      return;
+    int written = 0;
+    while (written < (int)message.size()) {
+      int n = write(stdin_fd, message.c_str(), (int)message.size() - written);
+      if (n == -1) {
+        perror("write");
+        break;
+      }
+      if (n == 0)
+        break;
+      written += n;
     }
-    fwrite(message.c_str(), 1, message.size(), f);
-    fclose(f);
 
     {
       unique_lock<mutex> lock(mtx);
