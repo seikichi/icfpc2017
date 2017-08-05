@@ -54,14 +54,22 @@ int main(int, char**) {
     int64_t max_score = -1;
     Move best_move;
 
+    int punter_id = game.PunterID();
+
     for (auto& edges : game.Map().Graph()) {
       for (auto& edge : edges) {
-        MapState tmp_map_state = map_state;
+        if (map_state.Claimer(edge.src) != punter_id &&
+            map_state.Claimer(edge.dest) != punter_id &&
+            !game.Map().Sites()[edge.src].is_mine &&
+            !game.Map().Sites()[edge.dest].is_mine) {
+          continue;
+        }
 
         auto src = sites[edge.src].original_id;
         auto dest = sites[edge.dest].original_id;
-        auto m = Move::Claim(game.PunterID(), src, dest);
+        auto m = Move::Claim(punter_id, src, dest);
 
+        MapState tmp_map_state = map_state;
         if (tmp_map_state.ApplyMove(game.Map(), m) != kOk)
           continue;
 
