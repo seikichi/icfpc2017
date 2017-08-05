@@ -44,7 +44,7 @@ GamePhase OfflineClientProtocol::Receive() {
     timeout = json.at("timeout").get<double>();
   } else {
     phase = GamePhase::kUnknown;
-    fprintf(stderr, "Unknown Json");
+    fprintf(stderr, "Unknown Json\n");
   }
   return phase;
 }
@@ -74,7 +74,7 @@ void OfflineClientProtocol::Send() {
     l_move["state"] = picojson::value(next_state);
     SendString(picojson::value(l_move).serialize());
   } else {
-    fprintf(stderr, "This Phase can't send");
+    fprintf(stderr, "This Phase can't send\n");
   }
 }
 
