@@ -13,6 +13,7 @@ pipeline {
     stage('lib') {
       steps {
         dir('lib') {
+          sh 'make clean'
           sh 'make test'
         }
       }
@@ -21,6 +22,7 @@ pipeline {
     stage('simulator') {
       steps {
         dir('simulator') {
+          sh 'make clean'
           sh 'make'
           sh 'make test'
         }
@@ -30,7 +32,7 @@ pipeline {
 
   post {
     failure {
-      slackSend(color: 'danger', message: "BUILD FAILED <${env.BUILD_URL}console|Jenkins Console> (author: ${env.CHANGE_AUTHOR})")
+      slackSend(color: 'danger', message: "BUILD FAILED <${env.BUILD_URL}console|Jenkins Console>")
     }
   }
 }
