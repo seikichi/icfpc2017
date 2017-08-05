@@ -9,50 +9,13 @@
 #include "move.h"
 #include "cout.h"
 #include "score.h"
+#include "scoring.h"
 using namespace std;
 
 int HANDSHAKE_TIMEOUT_MS = 1000;
 int SETUP_TIMEOUT_MS = 10000;
 int GAMEPLAY_TIMEOUT_MS = 1000;
-int MAX_CONSECUTIVE_TIMEOUT = 10;
-
-class Punter {
-public:
-  Punter(int id, const string& path):
-    id(id), path(path) {}
-
-  int Id() const {
-    return id;
-  }
-
-  const string& Path() const {
-    return path;
-  }
-
-private:
-  const int id;
-  const string path;
-};
-
-ostream& operator<<(ostream& stream, const Punter& punter) {
-  stream << "Punter(" << punter.Id() << ", \"" << punter.Path() << "\")";
-  return stream;
-}
-
-struct PunterState {
-  int n_consecutive_timeout = 0;
-  bool is_zombie = false;
-  string state;
-  Move prev_move = Move::Pass(-1);
-};
-
-ostream& operator<<(ostream& stream, const PunterState& ps) {
-  stream << "PunterState("
-    << "n_consecutive_timeout=" << ps.n_consecutive_timeout << ", "
-    << "is_zombie=" << ps.is_zombie << ", "
-    << "state=\"" << ps.state << "\")";
-  return stream;
-}
+int MAX_TIMEOUT = 10;
 
 PunterState ParseSetupOutput(const Punter& p, const string& output) {
   picojson::value v;
@@ -73,37 +36,36 @@ void Handshake(Process* process) {
   process->WriteMessage("{\"you\": \"example\"}", HANDSHAKE_TIMEOUT_MS);
 }
 
-vector<PunterState> Setup(const vector<Punter>& punters, const Map& map, bool prettify) {
-
-  vector<PunterState> states;
-  for (auto& p : punters) {
+PunterState SetupPunter(const Punter& p, int n_punters, const Map& map, bool prettify) {
     picojson::object j;
     j["punter"] = picojson::value((double)p.Id());
-    j["punters"] = picojson::value((double)punters.size());
+    j["punters"] = picojson::value((double)n_punters);
     j["map"] = picojson::value(map.SerializeJson());
     string input = picojson::value(j).serialize(prettify);
 
     auto process = SpawnProcess({p.Path()});
     if (process == nullptr) {
-      states.push_back({ 1, false, "", Move::Pass(p.Id()) });
-      continue;
+      return { 1, false, "", Move::Pass(p.Id()) };
     }
 
     Handshake(process.get());
     if (process->WriteMessage(input, SETUP_TIMEOUT_MS) != SpawnResult::kSuccess) {
-      states.push_back({ 1, false, "", Move::Pass(p.Id()) });
-      continue;
+      return { 1, false, "", Move::Pass(p.Id()) };
     }
     process->CloseStdin();
     string output;
     if (process->ReadMessage(SETUP_TIMEOUT_MS, &output) != SpawnResult::kSuccess) {
-      states.push_back({ 1, false, "", Move::Pass(p.Id()) });
-      continue;
+      return { 1, false, "", Move::Pass(p.Id()) };
     }
 
-    states.push_back(ParseSetupOutput(p, output));
-  }
+    return ParseSetupOutput(p, output);
+}
 
+vector<PunterState> DoSetup(const vector<Punter>& punters, const Map& map, bool prettify) {
+  vector<PunterState> states;
+  for (auto& p : punters) {
+    states.push_back(SetupPunter(p, punters.size(), map, prettify));
+  }
   return states;
 }
 
@@ -174,14 +136,13 @@ void DoRound(
     goto error;
   if (map_state->ApplyMove(map, punter.Id(), punter_state.prev_move) != kOk)
     goto error;
-  punter_state.n_consecutive_timeout = 0;
   cout << punter << ": " << punter_state.prev_move << "\n";
   return;
 
 error:
-  punter_state.n_consecutive_timeout++;
+  punter_state.n_timeout++;
   punter_state.prev_move = Move::Pass(punter.Id());
-  if (punter_state.n_consecutive_timeout == MAX_CONSECUTIVE_TIMEOUT) {
+  if (punter_state.n_timeout == MAX_TIMEOUT) {
     punter_state.is_zombie = true;
   }
 }
@@ -205,53 +166,6 @@ void DoGame(
     const Punter& p = punters[round % punters.size()];
     DoRound(p, map, prettify, punter_states, map_state);
   }
-}
-
-inline int64_t Square(int64_t x) { return x*x; }
-
-int64_t Dfs(
-    int site,
-    int mine,
-    int punter_id,
-    const Map& map,
-    const MapState& map_state,
-    /* inout */ vector<bool>* visited) {
-
-  (*visited)[site] = true;
-
-  int64_t sum = Square(map.Dist(mine, site));
-  for (const auto& e : map.Graph()[site]) {
-    if ((*visited)[e.dest])
-      continue;
-    if (map_state.Claimer(e.id) != punter_id)
-      continue;
-    sum += Dfs(e.dest, mine, punter_id, map, map_state, visited);
-  }
-  return sum;
-}
-
-int64_t ScoreMine(
-    int mine,
-    int punter_id,
-    const Map& map,
-    const MapState& map_state) {
-
-  vector<bool> visited(map.Size());
-  return Dfs(mine, mine, punter_id, map, map_state, &visited);
-}
-
-int64_t ScorePunter(
-    const Punter& punter,
-    const Map& map,
-    const MapState& map_state) {
-
-  int64_t score = 0;
-  for (const auto& site : map.Sites()) {
-    if (!site.is_mine)
-      continue;
-    score += ScoreMine(site.id, punter.Id(), map, map_state);
-  }
-  return score;
 }
 
 void DoScoring(
@@ -315,7 +229,7 @@ int main(int argc, char** argv) {
     cout << p << endl;
   }
 
-  auto states = Setup(punters, map, false);
+  auto states = DoSetup(punters, map, false);
   cout << "Initial State: " << states << endl;
 
   MapState map_state(map);
