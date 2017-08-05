@@ -124,11 +124,6 @@ void DoRound(
     /* inout */ vector<PunterState>* punter_states,
     /* inout */ MapState* map_state) {
 
-  picojson::object j_moves, j_move;
-  auto a_moves = MakeMovesJson(*punter_states);
-  j_moves["moves"] = picojson::value(a_moves);
-  j_move["move"] = picojson::value(j_moves);
-
   for (int i = 0; i < (int)punters.size(); ++i) {
     const Punter& punter = punters[i];
     PunterState& punter_state = (*punter_states)[i];
@@ -137,6 +132,11 @@ void DoRound(
       fprintf(stderr, "Punter %d is zombie.\n", punter.Id());
       continue;
     }
+
+    picojson::object j_moves, j_move;
+    auto a_moves = MakeMovesJson(*punter_states);
+    j_moves["moves"] = picojson::value(a_moves);
+    j_move["move"] = picojson::value(j_moves);
 
     picojson::object j = j_move;
     j["state"] = picojson::value(punter_state.state);
