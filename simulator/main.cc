@@ -8,6 +8,7 @@
 #include "map.h"
 #include "move.h"
 #include "cout.h"
+#include "score.h"
 using namespace std;
 
 int SETUP_TIMEOUT_MS = 10000;
@@ -107,6 +108,15 @@ Error ParseRoundOutput(
   return kOk;
 }
 
+picojson::array MakeMovesJson(const vector<PunterState>& punter_states) {
+  picojson::array moves;
+  for (int i = 0; i < (int)punter_states.size(); ++i) {
+    auto v = picojson::value(punter_states[i].prev_move.SerializeJson());
+    moves.push_back(v);
+  }
+  return moves;
+}
+
 void DoRound(
     const vector<Punter>& punters,
     const Map& map,
@@ -114,14 +124,9 @@ void DoRound(
     /* inout */ vector<PunterState>* punter_states,
     /* inout */ MapState* map_state) {
 
-  picojson::array moves;
-  for (int i = 0; i < (int)punter_states->size(); ++i) {
-    auto v = picojson::value((*punter_states)[i].prev_move.SerializeJson());
-    moves.push_back(v);
-  }
-
   picojson::object j_moves, j_move;
-  j_moves["moves"] = picojson::value(moves);
+  auto a_moves = MakeMovesJson(*punter_states);
+  j_moves["moves"] = picojson::value(a_moves);
   j_move["move"] = picojson::value(j_moves);
 
   for (int i = 0; i < (int)punters.size(); ++i) {
@@ -184,6 +189,86 @@ void DoGame(
   }
 }
 
+inline int64_t Square(int64_t x) { return x*x; }
+
+int64_t Dfs(
+    int site,
+    int mine,
+    int punter_id,
+    const Map& map,
+    const MapState& map_state,
+    /* inout */ vector<bool>* visited) {
+
+  (*visited)[site] = true;
+
+  int64_t sum = Square(map.Dist(mine, site));
+  for (const auto& e : map.Graph()[site]) {
+    if ((*visited)[e.dest])
+      continue;
+    if (map_state.Claimer(e.id) != punter_id)
+      continue;
+    sum += Dfs(e.dest, mine, punter_id, map, map_state, visited);
+  }
+  return sum;
+}
+
+int64_t ScoreMine(
+    int mine,
+    int punter_id,
+    const Map& map,
+    const MapState& map_state) {
+
+  vector<bool> visited(map.Size());
+  return Dfs(mine, mine, punter_id, map, map_state, &visited);
+}
+
+int64_t ScorePunter(
+    const Punter& punter,
+    const Map& map,
+    const MapState& map_state) {
+
+  int64_t score = 0;
+  for (const auto& site : map.Sites()) {
+    if (!site.is_mine)
+      continue;
+    score += ScoreMine(site.id, punter.Id(), map, map_state);
+  }
+  return score;
+}
+
+void DoScoring(
+    const vector<Punter>& punters,
+    const vector<PunterState>& punter_states,
+    const Map& map,
+    const MapState& map_state) {
+
+  picojson::array scores;
+  for (const auto& punter : punters) {
+    int64_t s = ScorePunter(punter, map, map_state);
+    Score score(punter.Id(), s);
+    scores.push_back(picojson::value(score.SerializeJson()));
+  }
+
+  for (int i = 0; i < (int)punters.size(); ++i) {
+    const Punter& punter = punters[i];
+    const PunterState state = punter_states[i];
+
+    picojson::object o_stop;
+    o_stop["moves"] = picojson::value(MakeMovesJson(punter_states));
+    o_stop["scores"] = picojson::value(scores);
+
+    picojson::object j;
+    j["stop"] = picojson::value(o_stop);
+    j["state"] = picojson::value(state.state);
+
+    string input = picojson::value(j).serialize();
+    string output;
+    Spawn({punter.Path()}, input, GAMEPLAY_TIMEOUT_MS, &output);
+    // ignore Spwan() result
+  }
+}
+
+
 int main(int argc, char** argv) {
   if (argc <= 3) {
     fprintf(stderr, "Usage: %s MAP PUNTER_0 PUNTER_1 ...\n", argv[0]);
@@ -212,6 +297,8 @@ int main(int argc, char** argv) {
   DoGame(punters, map, false, &states, &map_state);
   cout << "Last State: " << states << endl;
   cout << "Map State: " << map_state << endl;
+
+  DoScoring(punters, states, map, map_state);
 
   return 0;
 }

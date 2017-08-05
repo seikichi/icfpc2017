@@ -8,6 +8,8 @@ using namespace std;
 class Score {
 public:
   Score() { Clear(); }
+  Score(int punter_id, int64_t score):
+    punter_id(punter_id), score(score) {}
   Score(const std::string &json) { Deserialize(json); }
   Score(const picojson::object &json) { Deserialize(json); }
   void Clear() {
