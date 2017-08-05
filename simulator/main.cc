@@ -201,7 +201,7 @@ void DoScoring(
     if (!p)
       goto error;
     Handshake(p.get());
-    if (p->WriteMessage(input, GAMEPLAY_TIMEOUT_MS) != SpawnResult::kSuccess)
+    if (p->WriteMessage(input, GAMEPLAY_TIMEOUT_MS * timeout_ratio) != SpawnResult::kSuccess)
       goto error;
     p->CloseStdin();
     continue;
