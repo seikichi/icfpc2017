@@ -1,5 +1,8 @@
 #include <iostream>
 #include <memory>
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/serialization/serialization.hpp>
 #include "protocol.h"
 #include "strings.h"
 #include "map.h"
@@ -8,16 +11,18 @@
 using namespace std;
 
 string MakeState(const Game& game, const MapState& ms) {
-  picojson::object o;
-  o["game"] = picojson::value(game.SerializeJson());
-  o["map_state"] = picojson::value(ms.SerializeJson());
-  return picojson::value(o).serialize();
+  std::stringstream ss;
+  boost::archive::text_oarchive oar(ss);
+  oar << game;
+  oar << ms;
+  return ss.str();
 }
 
 void FromState(const string& state, Game* game, MapState* ms) {
-  picojson::object o = StringToJson(state);
-  game->Deserialize(o["game"].get<picojson::object>());
-  ms->Deserialize(o["map_state"].get<picojson::object>());
+  std::stringstream ss(state);
+  boost::archive::text_iarchive iar(ss);
+  iar >> *game;
+  iar >> *ms;
 }
 
 int main(int, char**) {

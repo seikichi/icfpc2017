@@ -1,6 +1,9 @@
 #include <iostream>
 #include <memory>
 #include <queue>
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/serialization/serialization.hpp>
 #include "protocol.h"
 #include "strings.h"
 #include "map.h"
@@ -11,18 +14,20 @@ using namespace std;
 const int INF = 10000000;
 
 string MakeState(const Game& game, const MapState& ms, int my_rounds) {
-  picojson::object o;
-  o["game"] = picojson::value(game.SerializeJson());
-  o["map_state"] = picojson::value(ms.SerializeJson());
-  o["my_rounds"] = picojson::value((double)my_rounds);
-  return picojson::value(o).serialize();
+  std::stringstream ss;
+  boost::archive::text_oarchive oar(ss);
+  oar << game;
+  oar << ms;
+  oar << my_rounds;
+  return ss.str();
 }
 
 void FromState(const string& state, Game* game, MapState* ms, int* my_rounds) {
-  picojson::object o = StringToJson(state);
-  game->Deserialize(o["game"].get<picojson::object>());
-  ms->Deserialize(o["map_state"].get<picojson::object>());
-  *my_rounds = o["my_rounds"].get<double>();
+  std::stringstream ss(state);
+  boost::archive::text_iarchive iar(ss);
+  iar >> *game;
+  iar >> *ms;
+  iar >> *my_rounds;
 }
 
 void DoSetup(OfflineClientProtocol* protocol) {
