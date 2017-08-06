@@ -262,33 +262,50 @@ Move DecideByRoadRunner(const Game& game, const MapState& map_state, int my_roun
   int remaining_rounds = all_my_rounds - my_rounds;
 
   // サイトiを自分たちが取っている(繋いでいる)かどうか
-  UnionFind ufind(map.Size());
+  UnionFind self_ufind(map.Size());
   for (auto& es : map.Graph()) {
     for (auto& e : es) {
       if (map_state.Claimer(e.id) == punter_id) {
-        ufind.UnionSet(e.src, e.dest);
+        self_ufind.UnionSet(e.src, e.dest);
       }
     }
   }
-
-  // 一番伸ばしているmineのidを調べる
-  int biggest_mine = -1;
-  if (my_rounds == 0) {
-    // 鉱山をまだ持ってないときはいいやつを一番伸ばしているとする
-    biggest_mine = ChooseBestMine(game);
-  } else {
-    int max_size = -1;
-    for (const auto &site : map.Sites()) {
-      if (!site.is_mine) { continue; }
-      int size = ufind.Size(site.id);
-      if (size > max_size) {
-        biggest_mine = site.id;
-        max_size = size;
+  // サイトiを自分たちが取れる(繋いでいる)かどうか
+  UnionFind usable_ufind(map.Size());
+  for (auto& es : map.Graph()) {
+    for (auto& e : es) {
+      if (map_state.Claimer(e.id) == punter_id || map_state.Claimer(e.id) == -1) {
+        usable_ufind.UnionSet(e.src, e.dest);
       }
     }
   }
+  // 各グループで使える辺の数
+  vector<int> usable_edge_count(map.Size(), 0);
+  for (auto& es : map.Graph()) {
+    for (auto& e : es) {
+      if (map_state.Claimer(e.id) != -1 || self_ufind.FindSet(e.src, e.dest)) { continue; }
+      usable_edge_count[self_ufind.Root(e.src)]++;
+    }
+  }
 
-  // biggest_mineからまだ取ってない任意の鉱山への距離（他人がclaimしていない辺のみ使用可）
+  // 初期選択した頂点を伸ばしつづける
+  int from_mine = ChooseBestMine(game);
+
+  // mineから出る辺が無くなりそうだったら抑えておく
+  // ただし、初期選択した頂点につなげれない場合は諦める
+  for (const auto &site : map.Sites()) {
+    if (!site.is_mine) { continue; }
+    if (self_ufind.FindSet(site.id, from_mine)) { continue; }
+    if (usable_edge_count[self_ufind.Root(site.id)] > 3) { continue; }
+    if (!usable_ufind.FindSet(site.id, from_mine)) { continue; }
+    fprintf(stderr, "Change from_mine, %d %d\n", site.id, usable_edge_count[self_ufind.Root(site.id)]);
+    assert(usable_edge_count[self_ufind.Root(site.id)] != 0);
+    from_mine = site.id;
+    break;
+  }
+
+
+  // from_mineからまだ取ってない任意の鉱山への距離（他人がclaimしていない辺のみ使用可）
   vector<int> dist_to_any_mine_from_the_site(sites.size(), INF);
   int n_not_our_mines = 0;
   int n_all_mines = 0;
@@ -296,7 +313,7 @@ Move DecideByRoadRunner(const Game& game, const MapState& map_state, int my_roun
   for (int i = 0; i < (int)sites.size(); ++i) {
     if (!sites[i].is_mine) { continue; }
     ++n_all_mines;
-    if (ufind.FindSet(i, biggest_mine)) { continue; }
+    if (self_ufind.FindSet(i, from_mine)) { continue; }
     ++n_not_our_mines;
     auto& mine = sites[i];
     vector<int> dist_to_the_mine = Bfs(map, map_state, mine.id, punter_id);
@@ -320,12 +337,12 @@ Move DecideByRoadRunner(const Game& game, const MapState& map_state, int my_roun
   for (auto& edges : game.Map().Graph()) {
     for (auto& edge : edges) {
       // 他の人に取られている辺や、とっても意味がない辺は無視
-      if (map_state.Claimer(edge.id) != -1 || ufind.FindSet(edge.src, edge.dest)) {
+      if (map_state.Claimer(edge.id) != -1 || self_ufind.FindSet(edge.src, edge.dest)) {
         continue;
       }
 
-      // 片方の辺がbiggest_mineに繋がっていれば候補
-      if (!ufind.FindSet(edge.src, biggest_mine) && !ufind.FindSet(edge.dest, biggest_mine)) {
+      // 片方の辺がfrom_mineに繋がっていれば候補
+      if (!self_ufind.FindSet(edge.src, from_mine) && !self_ufind.FindSet(edge.dest, from_mine)) {
         continue;
       }
 
