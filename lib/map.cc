@@ -1,5 +1,6 @@
 #include "map.h"
 #include <assert.h>
+#include <queue>
 #include "strings.h"
 #include "cout.h"
 
@@ -80,18 +81,21 @@ picojson::object Map::SerializeJson() const {
 
 
 void Map::InitDists() {
-  // TODO サイズが大きい場合の対応
   dists = vector<vector<int>>(Size(), vector<int>(Size(), 1 << 29));
-  for (int i = 0; i < Size(); i++) { dists[i][i] = 0; }
-  for (const auto &es : graph) {
-    for (const auto &e : es) {
-      dists[e.src][e.dest] = 1;
-    }
-  }
-  for (int k = 0; k < Size(); k++) {
-    for (int i = 0; i < Size(); i++) {
-      for (int j = 0; j < Size(); j++) {
-        dists[i][j] = min(dists[i][j], dists[i][k] + dists[k][j]);
+  for (int start = 0; start < Size(); start++) {
+    dists[start][start] = 0;
+    queue<pair<int, int>> que;
+    que.push(make_pair(start, 0));
+    while (!que.empty()) {
+      int from = que.front().first;
+      int d = que.front().second;
+      que.pop();
+      for (const auto &edge : graph[from]) {
+        int to = edge.dest;
+        int nd = d + 1;
+        if (dists[start][to] <= nd) { continue; }
+        dists[start][to] = nd;
+        que.push(make_pair(to, nd));
       }
     }
   }
