@@ -28,7 +28,6 @@ void FromState(const string& state, Game* game, MapState* ms, int* my_rounds) {
 
 void DoSetup(OfflineClientProtocol* protocol) {
   auto game = protocol->Game();
-  cerr << game.SerializeString() << endl;
 
   MapState initial_map_state(game.Map());
   protocol->SetState(MakeState(game, initial_map_state, 0));

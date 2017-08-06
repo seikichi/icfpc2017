@@ -251,11 +251,9 @@ int main(int argc, char** argv) {
   }
 
   auto states = DoSetup(punters, map, false);
-  cout << "Initial State: " << states << endl;
 
   MapState map_state(map);
   DoGame(punters, map, false, &states, &map_state);
-  cout << "Last State: " << states << endl;
   cout << "Map State: " << map_state << endl;
 
   DoScoring(punters, states, map, map_state);

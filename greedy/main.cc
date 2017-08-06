@@ -87,7 +87,6 @@ int main(int, char**) {
   if (protocol->Phase() == GamePhase::kSetup) {
     DoSetup(protocol.get());
   } else if (protocol->Phase() == GamePhase::kGamePlay) {
-    cerr << "GamePlay: state = " << protocol->State() << endl;
     RunAiWithTimeoutAndDie(protocol.get(), DecideByGreedy, 900);
   } else if (protocol->Phase() == GamePhase::kScoring) {
     DoScoring(protocol.get());

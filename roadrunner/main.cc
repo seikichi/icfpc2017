@@ -194,6 +194,7 @@ Move DecideByRoadRunner(const Game& game, const MapState& map_state, int my_roun
 
   if (min_dist == INF) {
     // Greedy にフォールバック
+    cerr << "[roadrunner] Fallback to Greedy" << endl;
     return Greedy(game, map_state);
   }
 
@@ -210,7 +211,6 @@ int main(int, char**) {
   if (protocol->Phase() == GamePhase::kSetup) {
     DoSetup(protocol.get());
   } else if (protocol->Phase() == GamePhase::kGamePlay) {
-    cerr << "GamePlay: state = " << protocol->State() << endl;
     RunAiWithTimeoutAndDie(protocol.get(), DecideByRoadRunner, 900);
   } else if (protocol->Phase() == GamePhase::kScoring) {
     DoScoring(protocol.get());
