@@ -106,6 +106,44 @@ vector<int> Bfs(const Map& map, const MapState& map_state, int mine, int punter_
   return dist;
 }
 
+int ChooseBestMine(const Game& game) {
+  auto& map = game.Map();
+  auto& sites = map.Sites();
+
+  pair<int, int> max_score = make_pair(-1, -1);
+  int best_mine = -1;
+
+  for (int i = 0; i < (int)sites.size(); ++i) {
+    if (!sites[i].is_mine)
+      continue;
+
+    // この鉱山から到達可能な頂点数
+    int n_reachable_sites = 0;
+    // この鉱山から到達可能な鉱山の数
+    int n_reachable_mines = 0;
+    // この鉱山から到達可能な頂点への距離の合計
+    int sum_dist = 0;
+
+    for (int k = 0; k < (int)sites.size(); ++k) {
+      int dist = map.Dist(i, k);
+      if (dist >= INF)
+        continue;
+      ++n_reachable_sites;
+      if (sites[k].is_mine)
+        ++n_reachable_mines;
+      sum_dist = dist;
+    }
+
+    pair<int, int> score = make_pair(n_reachable_sites * n_reachable_mines, -sum_dist);
+    if (score > max_score) {
+      max_score = score;
+      best_mine = i;
+    }
+  }
+
+  return best_mine;
+}
+
 Move DecideByRoadRunner(const Game& game, const MapState& map_state, int my_rounds) {
   auto& sites = game.Map().Sites();
   int punter_id = game.PunterID();
@@ -137,6 +175,14 @@ Move DecideByRoadRunner(const Game& game, const MapState& map_state, int my_roun
     }
   }
 
+  int best_mine;
+  if (no_our_mines) {
+    // 鉱山をまだ持ってないときはいいやつを選びたい
+    best_mine = ChooseBestMine(game);
+  } else {
+    best_mine = -1;
+  }
+
   // サイトiからまだ取ってない任意の鉱山への距離（他人がclaimしていない辺のみ使用可）
   vector<int> dist_to_any_mine_from_the_site(sites.size(), INF);
   int n_not_our_mines = 0;
@@ -146,7 +192,7 @@ Move DecideByRoadRunner(const Game& game, const MapState& map_state, int my_roun
     if (!sites[i].is_mine)
       continue;
     ++n_all_mines;
-    if (belongs_to_us[i])
+    if (belongs_to_us[i] || i == best_mine)     // no_our_mines の場合は best_mine を取るので
       continue;
     ++n_not_our_mines;
     auto& mine = sites[i];
@@ -174,7 +220,7 @@ Move DecideByRoadRunner(const Game& game, const MapState& map_state, int my_roun
 
       bool is_candidate;
       if (no_our_mines)
-        is_candidate = sites[edge.src].is_mine;
+        is_candidate = edge.src == best_mine;
       else
         is_candidate = belongs_to_us[edge.src] && !belongs_to_us[edge.dest];
       if (!is_candidate)
