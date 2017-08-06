@@ -46,3 +46,15 @@ picojson::object StringToJson(const string &str) {
 string AddLengthToJson(const string& str) {
   return to_string(str.size()) + ":" + str;
 }
+
+string ReplaceString(const std::string& subject,
+                     const std::string& search,
+                     const std::string& replace) {
+  size_t pos = 0;
+  string ret = subject;
+  while((pos = ret.find(search, pos)) != string::npos) {
+    ret.replace(pos, search.length(), replace);
+    pos += replace.length();
+  }
+  return ret;
+}
