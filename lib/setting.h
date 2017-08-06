@@ -13,10 +13,12 @@ public:
   void Clear() {
     exist = false;
     futures = false;
+    splurges = false;
   }
 
   bool Exist() const { return exist; }
   bool Futures() const { return futures; }
+  bool Splurges() const { return splurges; }
 
   bool Deserialize(const string &json);
   bool Deserialize(const picojson::object &json);
@@ -25,6 +27,7 @@ public:
 private:
   bool exist;
   bool futures;
+  bool splurges;
 
   friend class boost::serialization::access;
   template <class Archive>
@@ -32,5 +35,6 @@ private:
     {
       ar & exist;
       ar & futures;
+      ar & splurges;
     }
 };
