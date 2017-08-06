@@ -12,6 +12,7 @@ using namespace picojson;
 const string kLogFileEnvVar = "PUNTER_LOG_FILE";
 void WriteSetupLog(const Game& game);
 void WriteGamePlayLog(const Move& move, const vector<Move>& other_moves);
+void WriteStopLog(const picojson::object& json);
 
 GamePhase OfflineClientProtocol::Receive() {
   phase = GamePhase::kHandshake;
@@ -44,6 +45,8 @@ GamePhase OfflineClientProtocol::Receive() {
       const auto &o = v.get<object>();
       scores.emplace_back(Score(o));
     }
+
+    WriteStopLog(json);
     // NOTE: lamduct (official server?) does not return `state` property
     // prev_state = json.at("state").get<string>();
   } else if (json.count("timeot")) {
@@ -125,6 +128,11 @@ bool IsLogMode() {
   return env != nullptr;
 }
 
+bool IsSingleLogMode() {
+  string env = getenv(kLogFileEnvVar.c_str());
+  return env.find("#{punter_id}", 0) == string::npos;
+}
+
 ofstream OpenLogStream(int punter_id, ios_base::openmode mode) {
   auto env = getenv(kLogFileEnvVar.c_str());
   assert(env != nullptr);
@@ -165,5 +173,12 @@ void WriteGamePlayLog(const Move& move, const vector<Move>& other_moves) {
       auto m = other_moves[(move.PunterID() + i) % other_moves.size()];
       stream << picojson::value(m.SerializeJson()).serialize() << endl;
     }
+  }
+}
+
+void WriteStopLog(const picojson::object& json) {
+  if (IsLogMode() && IsSingleLogMode()) {
+    ofstream stream = OpenLogStream(0, ios_base::app);
+    stream << picojson::value(json).serialize() << endl;
   }
 }
