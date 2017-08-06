@@ -145,6 +145,7 @@ void WriteSetupLog(const Game& game) {
     for (auto edges: map.Graph()) {
       num_edges += edges.size();
     }
+    num_edges /= 2;
 
     ofstream stream = OpenLogStream(game.PunterID(), ios_base::out);
     stream <<
