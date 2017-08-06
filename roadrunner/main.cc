@@ -29,6 +29,87 @@ Move AnyMove(const Game& game, const MapState& map_state) {
   return Move::Pass(punter_id);
 }
 
+void Visit(
+    int site,
+    int punter_id,
+    const Map& map,
+    const MapState& map_state,
+    /* inout */ vector<bool>* visited) {
+
+  (*visited)[site] = true;
+
+  for (const auto& e : map.Graph()[site]) {
+    if ((*visited)[e.dest])
+      continue;
+    if (map_state.Claimer(e.id) != punter_id && map_state.Claimer(e.id) != -1)
+      continue;
+    Visit(e.dest, punter_id, map, map_state, visited);
+  }
+}
+
+// 遠くのサイトを目指す
+vector<int> DistToHighScoreSite(const Game& game, const MapState& map_state) {
+  auto& sites = game.Map().Sites();
+  auto& map = game.Map();
+  int punter_id = game.PunterID();
+
+  // 到達可能なサイトを求める
+  vector<bool> reachable(sites.size(), false);
+  vector<bool> belongs_to_us(sites.size(), false);
+  for (auto& edges : game.Map().Graph()) {
+    for (auto& edge : edges) {
+      if (map_state.Claimer(edge.id) == punter_id) {
+        belongs_to_us[edge.src] = true;
+        if (!reachable[edge.src]) {
+          Visit(edge.src, punter_id, map, map_state, &reachable);
+        }
+      }
+    }
+  }
+
+  // まだ取っていないサイトの中で到達可能かつ得点が最大のものを見つけてくる
+  int best_site = -1;
+  int max_score = -1;
+  for (int i = 0; i < (int)sites.size(); ++i) {
+    if (!reachable[i])
+      continue;
+    int64_t score = 0;
+    for (int k = 0; k < (int)sites.size(); ++k) {
+      if (!sites[k].is_mine || !belongs_to_us[k])
+        continue;
+      score += map.Dist(i, k) * map.Dist(i, k);
+    }
+    if (score > max_score) {
+      best_site = i;
+      max_score = score;
+    }
+  }
+
+  if (best_site == -1) {
+    return vector<int>(sites.size(), INF);
+  }
+
+  queue<int> q;
+  vector<int> dist(sites.size(), INF);
+
+  q.push(best_site);
+  dist[best_site] = 0;
+
+  while (!q.empty()) {
+    int site = q.front(); q.pop();
+    for (auto& e : map.Graph()[site]) {
+      if (map_state.Claimer(e.id) != -1 && map_state.Claimer(e.id) != punter_id)
+        continue;
+      int new_dist = dist[site] + 1;
+      if (new_dist >= dist[e.dest])
+        continue;
+      dist[e.dest] = new_dist;
+      q.push(e.dest);
+    }
+  }
+  return dist;
+}
+
 Move Greedy(const Game& game, const MapState& map_state) {
   auto& sites = game.Map().Sites();
   int punter_id = game.PunterID();
@@ -43,7 +124,9 @@ Move Greedy(const Game& game, const MapState& map_state) {
     }
   }
 
-  int64_t max_score = -1;
+  vector<int> dist_to_hss = DistToHighScoreSite(game, map_state);
+
+  pair<int64_t, int> max_score = make_pair(-1, -INF);
   Move best_move = Move::Pass(punter_id);
 
   for (auto& edges : game.Map().Graph()) {
@@ -66,7 +149,8 @@ Move Greedy(const Game& game, const MapState& map_state) {
       if (tmp_map_state.ApplyMove(game.Map(), m) != kOk)
         continue;
 
-      int64_t score = ScorePunter(game.PunterID(), game.Map(), tmp_map_state);
+      int64_t p_score = ScorePunter(game.PunterID(), game.Map(), tmp_map_state);
+      auto score = make_pair(p_score, -dist_to_hss[edge.dest]);
       if (score > max_score) {
         max_score = score;
         best_move = m;
@@ -74,7 +158,7 @@ Move Greedy(const Game& game, const MapState& map_state) {
     }
   }
 
-  if (max_score == -1) {
+  if (best_move.Type() == MoveType::kPass) {
     // スコアが上がるムーブがないので、適当に一個辺を取る
     return AnyMove(game, map_state);
   }
