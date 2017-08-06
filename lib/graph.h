@@ -37,5 +37,5 @@ struct Edge {
 };
 typedef vector<Edge> Edges;
 typedef vector<Edges> Graph;
-// typedef vector<Weight> Array;
-// typedef vector<Array> Matrix;
+
+int Maxflow(const Graph &g, int s, int t);
