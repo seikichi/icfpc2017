@@ -10,17 +10,19 @@ using namespace std;
 
 const int INF = 10000000;
 
-string MakeState(const Game& game, const MapState& ms) {
+string MakeState(const Game& game, const MapState& ms, int my_rounds) {
   picojson::object o;
   o["game"] = picojson::value(game.SerializeJson());
   o["map_state"] = picojson::value(ms.SerializeJson());
+  o["my_rounds"] = picojson::value((double)my_rounds);
   return picojson::value(o).serialize();
 }
 
-void FromState(const string& state, Game* game, MapState* ms) {
+void FromState(const string& state, Game* game, MapState* ms, int* my_rounds) {
   picojson::object o = StringToJson(state);
   game->Deserialize(o["game"].get<picojson::object>());
   ms->Deserialize(o["map_state"].get<picojson::object>());
+  *my_rounds = o["my_rounds"].get<double>();
 }
 
 void DoSetup(OfflineClientProtocol* protocol) {
@@ -29,7 +31,7 @@ void DoSetup(OfflineClientProtocol* protocol) {
   cerr << game.SerializeString() << endl;
 
   MapState initial_map_state(game.Map());
-  protocol->SetState(MakeState(game, initial_map_state));
+  protocol->SetState(MakeState(game, initial_map_state, 0));
 
   cerr << "Send" << endl;
   protocol->Send();
@@ -128,10 +130,20 @@ vector<int> Bfs(const Map& map, const MapState& map_state, int mine, int punter_
   return dist;
 }
 
-Move Decide(Game& game, const MapState& map_state) {
+Move Decide(Game& game, const MapState& map_state, int my_rounds) {
   auto& sites = game.Map().Sites();
   int punter_id = game.PunterID();
   const Map& map = game.Map();
+
+  // あと何回行動できるのかを計算する
+  int n_rounds = 0;
+  for (const auto& es : map.Graph()) {
+    n_rounds += (int)es.size();
+  }
+  assert(n_rounds % 2 == 0);
+  n_rounds /= 2;
+  int all_my_rounds = n_rounds / game.PunterNum() + (int)(punter_id < n_rounds % game.PunterNum());
+  int remaining_rounds = all_my_rounds - my_rounds;
 
   bool no_our_mines = true;
 
@@ -174,7 +186,7 @@ Move Decide(Game& game, const MapState& map_state) {
 
   cerr << "n_our_mines = " << (n_all_mines - n_not_our_mines) << ", n_all_mines = " << n_all_mines << endl;
 
-  double max_score = -1;
+  int min_dist = INF;
   Move best_move = Move::Pass(punter_id);
 
   for (auto& edges : game.Map().Graph()) {
@@ -190,15 +202,14 @@ Move Decide(Game& game, const MapState& map_state) {
       if (!is_candidate)
         continue;
 
-      double score = 0;
-      for (int i = 0; i < (int)sites.size(); ++i) {
-        if (!sites[i].is_mine)
-          continue;
-        double d = dist_to_any_mine_from_the_site[edge.dest];
-        score += 1.0 / d;
+      int d = dist_to_any_mine_from_the_site[edge.dest];
+      if (d > remaining_rounds - 1) {
+        // 残りのターンすべてを使ってもたどり着かないなら無視
+        // -1 しているのはこの辺を取るのに１ターン消費するから
+        continue;
       }
-      if (score >= max_score) {
-        max_score = score;
+      if (d < min_dist) {
+        min_dist = d;
         best_move = Move::Claim(
             punter_id,
             sites[edge.src].original_id,
@@ -207,8 +218,8 @@ Move Decide(Game& game, const MapState& map_state) {
     }
   }
 
-  if (max_score < (double)(n_all_mines + 1) / INF) {
-    // スコアが低すぎるので Greedy にフォールバック
+  if (min_dist == INF) {
+    // Greedy にフォールバック
     return Greedy(game, map_state);
   }
 
@@ -220,7 +231,8 @@ void DoGamePlay(OfflineClientProtocol* protocol) {
 
   Game game;
   MapState map_state(game.Map());
-  FromState(protocol->State(), &game, &map_state);
+  int my_rounds;
+  FromState(protocol->State(), &game, &map_state, &my_rounds);
 
   for (const Move& m : protocol->OtherMoves()) {
     if (map_state.ApplyMove(game.Map(), m) != kOk) {
@@ -229,8 +241,8 @@ void DoGamePlay(OfflineClientProtocol* protocol) {
     }
   }
 
-  protocol->SetPlayerMove(Decide(game, map_state));
-  protocol->SetState(MakeState(game, map_state));
+  protocol->SetPlayerMove(Decide(game, map_state, my_rounds));
+  protocol->SetState(MakeState(game, map_state, my_rounds + 1));
 
   protocol->Send();
 }
