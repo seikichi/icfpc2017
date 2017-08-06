@@ -85,6 +85,9 @@ void RunAiWithTimeoutAndDie(
     std::function<Move (const Game& game, const MapState& map_state, int my_rounds)> decide,
     int timeout_millis) {
 
+  using namespace chrono;
+  steady_clock::time_point deadline = steady_clock::now() + milliseconds(timeout_millis);
+
   // state から状態を復元
   Game game;
   MapState map_state;
@@ -98,9 +101,6 @@ void RunAiWithTimeoutAndDie(
       continue;
     }
   }
-
-  using namespace chrono;
-  steady_clock::time_point deadline = steady_clock::now() + milliseconds(timeout_millis);
 
   condition_variable cv;
   mutex mtx;
