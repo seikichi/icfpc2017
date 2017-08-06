@@ -35,8 +35,78 @@ void DoSetup(OfflineClientProtocol* protocol) {
   protocol->Send();
 }
 
+Move AnyMove(Game& game, const MapState& map_state) {
+  auto& sites = game.Map().Sites();
+  int punter_id = game.PunterID();
+  for (auto& edges : game.Map().Graph()) {
+    for (auto& edge : edges) {
+      if (map_state.Claimer(edge.id) != -1) {
+        continue;
+      }
+      auto src = sites[edge.src].original_id;
+      auto dest = sites[edge.dest].original_id;
+      return Move::Claim(punter_id, src, dest);
+    }
+  }
+  return Move::Pass(punter_id);
+}
+
+Move Greedy(Game& game, const MapState& map_state) {
+  auto& sites = game.Map().Sites();
+  int punter_id = game.PunterID();
+
+  vector<bool> connected(game.Map().Sites().size());
+
+  for (auto& edges : game.Map().Graph()) {
+    for (auto& edge : edges) {
+      if (map_state.Claimer(edge.id) == punter_id) {
+        connected[edge.src] = true;
+        connected[edge.dest] = true;
+      }
+    }
+  }
+
+  int64_t max_score = -1;
+  Move best_move = Move::Pass(punter_id);
+
+  for (auto& edges : game.Map().Graph()) {
+    for (auto& edge : edges) {
+      if (map_state.Claimer(edge.id) != -1) {
+        continue;
+      }
+      if (!game.Map().Sites()[edge.src].is_mine &&
+          !game.Map().Sites()[edge.dest].is_mine &&
+          !connected[edge.src] &&
+          !connected[edge.dest]) {
+        continue;
+      }
+
+      auto src = sites[edge.src].original_id;
+      auto dest = sites[edge.dest].original_id;
+      auto m = Move::Claim(punter_id, src, dest);
+
+      MapState tmp_map_state = map_state;
+      if (tmp_map_state.ApplyMove(game.Map(), m) != kOk)
+        continue;
+
+      int64_t score = ScorePunter(game.PunterID(), game.Map(), tmp_map_state);
+      if (score > max_score) {
+        max_score = score;
+        best_move = m;
+      }
+    }
+  }
+
+  if (max_score == -1) {
+    // スコアが上がるムーブがないので、適当に一個辺を取る
+    return AnyMove(game, map_state);
+  }
+
+  return best_move;
+}
+
 // mine から各サイトへの距離の配列を返す
-vector<int> Bfs(const Map& map, MapState& map_state, int mine, int punter_id) {
+vector<int> Bfs(const Map& map, const MapState& map_state, int mine, int punter_id) {
   vector<int> dist(map.Sites().size(), INF);
 
   queue<int> q;
@@ -58,29 +128,15 @@ vector<int> Bfs(const Map& map, MapState& map_state, int mine, int punter_id) {
   return dist;
 }
 
-void DoGamePlay(OfflineClientProtocol* protocol) {
-  cerr << "GamePlay: state = " << protocol->State() << endl;
-
-  Game game;
-  MapState map_state(game.Map());
-  FromState(protocol->State(), &game, &map_state);
-
+Move Decide(Game& game, const MapState& map_state) {
   auto& sites = game.Map().Sites();
-
-  for (const Move& m : protocol->OtherMoves()) {
-    if (map_state.ApplyMove(game.Map(), m) != kOk) {
-      cerr << "Illegal move: " << m << endl;
-      continue;
-    }
-  }
-
   int punter_id = game.PunterID();
   const Map& map = game.Map();
 
   bool no_our_mines = true;
 
   // サイトiを自分たちが取っている(繋いでいる)かどうか
-  vector<bool> belongs_to_us(sites.size());
+  vector<bool> belongs_to_us(sites.size(), false);
 
   for (auto& es : map.Graph()) {
     for (auto& e : es) {
@@ -95,12 +151,16 @@ void DoGamePlay(OfflineClientProtocol* protocol) {
 
   // サイトiからまだ取ってない任意の鉱山への距離（他人がclaimしていない辺のみ使用可）
   vector<int> dist_to_any_mine_from_the_site(sites.size(), INF);
+  int n_not_our_mines = 0;
+  int n_all_mines = 0;
 
   for (int i = 0; i < (int)sites.size(); ++i) {
     if (!sites[i].is_mine)
       continue;
+    ++n_all_mines;
     if (belongs_to_us[i])
       continue;
+    ++n_not_our_mines;
     auto& mine = sites[i];
     vector<int> dist_to_the_mine = Bfs(map, map_state, mine.id, punter_id);
 
@@ -111,6 +171,8 @@ void DoGamePlay(OfflineClientProtocol* protocol) {
       );
     }
   }
+
+  cerr << "n_our_mines = " << (n_all_mines - n_not_our_mines) << ", n_all_mines = " << n_all_mines << endl;
 
   double max_score = -1;
   Move best_move = Move::Pass(punter_id);
@@ -145,10 +207,31 @@ void DoGamePlay(OfflineClientProtocol* protocol) {
     }
   }
 
-  protocol->SetPlayerMove(best_move);
+  if (max_score < (double)(n_all_mines + 1) / INF) {
+    // スコアが低すぎるので Greedy にフォールバック
+    return Greedy(game, map_state);
+  }
+
+  return best_move;
+}
+
+void DoGamePlay(OfflineClientProtocol* protocol) {
+  cerr << "GamePlay: state = " << protocol->State() << endl;
+
+  Game game;
+  MapState map_state(game.Map());
+  FromState(protocol->State(), &game, &map_state);
+
+  for (const Move& m : protocol->OtherMoves()) {
+    if (map_state.ApplyMove(game.Map(), m) != kOk) {
+      cerr << "Illegal move: " << m << endl;
+      continue;
+    }
+  }
+
+  protocol->SetPlayerMove(Decide(game, map_state));
   protocol->SetState(MakeState(game, map_state));
 
-  cerr << "Send" << endl;
   protocol->Send();
 }
 
