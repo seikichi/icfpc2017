@@ -215,7 +215,7 @@ int main(int, char**) {
   if (protocol->Phase() == GamePhase::kSetup) {
     DoSetup(protocol.get());
   } else if (protocol->Phase() == GamePhase::kGamePlay) {
-    RunAiWithTimeoutAndDie(protocol.get(), DecideByRoadRunner, 900);
+    RunAiWithTimeoutAndDie(protocol.get(), DecideByRoadRunner, 750);
   } else if (protocol->Phase() == GamePhase::kScoring) {
     DoScoring(protocol.get());
   }
