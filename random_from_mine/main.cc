@@ -43,13 +43,15 @@ Move AnyMove(const Game& game, const MapState& map_state) {
   return Move::Pass(punter_id);
 }
 
-void dfs(int punter_id, const Graph &g, const MapState& map_state, int start, int from, vector<int> *visited) {
-  if (visited->at(from) == -1) { return; }
-  visited->at(from) = start;
+int dfs(int punter_id, const Graph &g, const MapState& map_state, int start, int from, vector<int> *connected) {
+  if (connected->at(from) != -1) { return 0; }
+  connected->at(from) = start;
+  int ret = 1;
   for (const auto &edge : g[from]) {
     if (map_state.Claimer(edge.id) != punter_id) { continue; }
-    dfs(punter_id, g, map_state, start, edge.dest, visited);
+    ret += dfs(punter_id, g, map_state, start, edge.dest, connected);
   }
+  return ret;
 }
 
 int main(int, char**) {
@@ -75,17 +77,17 @@ int main(int, char**) {
       }
     }
 
-    vector<int> visited(game.Map().Graph().size(), -1);
+    vector<int> connected(game.Map().Graph().size(), -1);
     for (auto const &site : game.Map().Sites()) {
       if (!site.is_mine) { continue; }
-      dfs(game.PunterID(), game.Map().Graph(), map_state, site.id, site.id, &visited);
+      dfs(game.PunterID(), game.Map().Graph(), map_state, site.id, site.id, &connected);
     }
 
     vector<Edge> candidates;
     for (auto edges : game.Map().Graph()) {
       for (auto edge : edges) {
         if (map_state.Claimer(edge.id) != -1) { continue; }
-        if (visited[edge.src] && visited[edge.dest]) { continue; }
+        if (connected[edge.src] == connected[edge.dest]) { continue; }
         candidates.push_back(edge);
       }
     }
