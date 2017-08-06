@@ -13,7 +13,7 @@ CXXFLAGS = $(OVERALL_OPTIONS) $(LANGUAGE_OPTIONS) $(WARNING_OPTIONS) $(OPTIMIZAT
            $(CODE_GENERATION_OPTIONS) $(PREPROCESSOR_OPTIONS) $(DEBUGGING_OPTIONS)
 
 LDFLAGS = -fsanitize=address
-LIBS = -lm
+LIBS = -lm -lboost_serialization
 
 SOURCES = $(wildcard ./*.cc)
 OBJECTS = $(patsubst ./%.cc, obj/main/%.o, $(SOURCES))

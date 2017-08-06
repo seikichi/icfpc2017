@@ -1,3 +1,5 @@
+#pragma once
+#include <boost/serialization/serialization.hpp>
 struct Random {
   unsigned int x;
   unsigned int y;
@@ -22,4 +24,14 @@ struct Random {
   int64_t next(int64_t l, int64_t r) { return next(r - l + 1) + l; }
   double next(double r) { return (double)Xor128() / 0xffffffff * r; }
   double next(double l, double r) { return next(r - l) + l; }
+
+  friend class boost::serialization::access;
+  template <class Archive>
+    void serialize(Archive& ar, unsigned int /*version*/)
+    {
+      ar & boost::serialization::make_nvp("", x);
+      ar & boost::serialization::make_nvp("", y);
+      ar & boost::serialization::make_nvp("", z);
+      ar & boost::serialization::make_nvp("", w);
+    }
 };

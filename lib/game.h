@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <boost/serialization/serialization.hpp>
 #include "picojson.h"
 
 #include "map.h"
@@ -32,4 +33,14 @@ private:
   int punter_num;
   ::Map map;
   ::Setting setting;
+
+  friend class boost::serialization::access;
+  template <class Archive>
+    void serialize(Archive& ar, unsigned int /*version*/)
+    {
+      ar & punter_id;
+      ar & punter_num;
+      ar & map;
+      ar & setting;
+    }
 };

@@ -4,6 +4,9 @@
 #include <memory>
 #include <ctime>
 #include <random>
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/serialization/serialization.hpp>
 #include "protocol.h"
 #include "random.h"
 
@@ -18,11 +21,17 @@ int main(int, char**) {
 
   if (protocol->Phase() == GamePhase::kSetup) {
     auto game = protocol->Game();
-    protocol->SetState(game.SerializeString());
+    std::stringstream ss;
+    boost::archive::text_oarchive oar(ss);
+    oar << game;
+    protocol->SetState(ss.str());
+    // cerr << ss.str() << endl;
     protocol->Send();
   } else if (protocol->Phase() == GamePhase::kGamePlay) {
+    std::stringstream ss(protocol->State());
     Game game;
-    game.Deserialize(protocol->State());
+    boost::archive::text_iarchive iar(ss);
+    iar >> game;
     auto sites = game.Map().Sites();
 
     unordered_set<int> lambdas;
@@ -51,7 +60,10 @@ int main(int, char**) {
     auto move = Move::Claim(game.PunterID(), src, dest);
 
     protocol->SetPlayerMove(move);
-    protocol->SetState(game.SerializeString());
+    ss.clear();
+    boost::archive::text_oarchive oar(ss);
+    oar << game;
+    protocol->SetState(ss.str());
     protocol->Send();
   } else if (protocol->Phase() == GamePhase::kScoring) {
     for (auto score : protocol->Scores()) {

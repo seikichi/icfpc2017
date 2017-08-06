@@ -1,5 +1,6 @@
 #pragma once
 #include <iostream>
+#include <boost/serialization/serialization.hpp>
 using namespace std;
 struct Site {
   int id;
@@ -16,4 +17,13 @@ struct Site {
     os << " }";
     return os;
   }
+
+  friend class boost::serialization::access;
+  template <class Archive>
+    void serialize(Archive& ar, unsigned int /*version*/)
+    {
+      ar & id;
+      ar & original_id;
+      ar & is_mine;
+    }
 };

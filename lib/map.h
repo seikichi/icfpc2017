@@ -1,6 +1,8 @@
 #pragma once
 #include <map>
 #include <iostream>
+#include <boost/serialization/serialization.hpp>
+#include <boost/serialization/map.hpp>
 #include "picojson.h"
 
 #include "graph.h"
@@ -38,6 +40,16 @@ private:
   vector<Edges> graph;
   map<int, int> site_id_map;
   vector<vector<int>> dists;
+
+  friend class boost::serialization::access;
+  template <class Archive>
+    void serialize(Archive& ar, unsigned int /*version*/)
+    {
+      ar & sites;
+      ar & graph;
+      ar & site_id_map;
+      ar & dists;
+    }
 };
 
 class MapState {
@@ -69,6 +81,13 @@ private:
   vector<int> edge2pid;
 
   friend ostream& operator<<(ostream& stream, const MapState& map_state);
+
+  friend class boost::serialization::access;
+  template <class Archive>
+    void serialize(Archive& ar, unsigned int /*version*/)
+    {
+      ar & edge2pid;
+    }
 };
 
 ostream& operator<<(ostream& stream, const MapState& map_state);

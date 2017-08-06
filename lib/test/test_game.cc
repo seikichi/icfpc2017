@@ -1,5 +1,8 @@
 #include "game.h"
 #include "gtest/gtest.h"
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/serialization/serialization.hpp>
 
 const string sample_json = R"(
 {
@@ -41,4 +44,25 @@ TEST(game, Serialize) {
   string str = game.SerializeString();
   // cout << str << endl;
   ASSERT_EQ(str, R"({"map":{"mines":[0],"rivers":[{"source":0,"target":1}],"sites":[{"id":0},{"id":1}]},"punter":1,"punters":2})");
+}
+
+TEST(game, boost_serialize) {
+  Game game;
+  bool ret = game.Deserialize(sample_json);
+  assert(ret);
+
+  std::stringstream ss;
+  boost::archive::text_oarchive ar(ss);
+  ar << game;
+  // cout << ss.str() << endl;
+
+  ss.clear();
+  boost::archive::text_iarchive ar2(ss);
+  Game game2;
+  ar2 >> game2;
+
+  ASSERT_EQ(game2.PunterID(), 1);
+  ASSERT_EQ(game2.PunterNum(), 2);
+  const Map &map = game.Map();
+  ASSERT_TRUE(map.Sites()[0].is_mine);
 }

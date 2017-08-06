@@ -1,6 +1,7 @@
 #pragma once
 #include <assert.h>
 #include <string>
+#include <boost/serialization/serialization.hpp>
 #include "picojson.h"
 #include "site.h"
 
@@ -28,4 +29,12 @@ public:
 private:
   Site source;
   Site target;
+
+  friend class boost::serialization::access;
+  template <class Archive>
+    void serialize(Archive& ar, unsigned int /*version*/)
+    {
+      ar & source;
+      ar & target;
+    }
 };

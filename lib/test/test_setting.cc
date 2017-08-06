@@ -1,5 +1,9 @@
 #include "setting.h"
 #include "gtest/gtest.h"
+#include <sstream>
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/serialization/serialization.hpp>
 
 const string sample_json = R"(
 {
@@ -34,4 +38,21 @@ TEST(setting, Deserialize) {
   ASSERT_FALSE(setting.Futures());
   string str = setting.SerializeString();
   ASSERT_EQ(str, "{}");
+}
+
+TEST(setting, boost_serialize) {
+  Setting setting;
+  bool ret = setting.Deserialize(sample_json);
+  assert(ret);
+  std::stringstream ss;
+  boost::archive::text_oarchive ar(ss);
+
+  ar << setting;
+  cout << ss.str() << endl;
+
+  ss.clear();
+  boost::archive::text_iarchive ar2(ss);
+  Setting setting2;
+  ar2 >> setting2;
+  ASSERT_TRUE(setting2.Futures());
 }

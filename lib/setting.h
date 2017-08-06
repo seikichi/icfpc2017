@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <boost/serialization/serialization.hpp>
 #include "picojson.h"
 
 using namespace std;
@@ -24,4 +25,12 @@ public:
 private:
   bool exist;
   bool futures;
+
+  friend class boost::serialization::access;
+  template <class Archive>
+    void serialize(Archive& ar, unsigned int /*version*/)
+    {
+      ar & exist;
+      ar & futures;
+    }
 };

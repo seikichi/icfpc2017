@@ -1,6 +1,7 @@
 #pragma once
 #include <iostream>
 #include <cassert>
+#include <boost/serialization/serialization.hpp>
 #include "picojson.h"
 
 enum class MoveType {
@@ -71,6 +72,16 @@ private:
   int punter_id;
   int source;
   int target;
+
+  friend class boost::serialization::access;
+  template <class Archive>
+    void serialize(Archive& ar, unsigned int /*version*/)
+    {
+      ar & type;
+      ar & punter_id;
+      ar & source;
+      ar & target;
+    }
 };
 
 inline std::ostream& operator<<(std::ostream& stream, const Move& move) {

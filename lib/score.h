@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <string>
+#include <boost/serialization/serialization.hpp>
 #include "picojson.h"
 using namespace std;
 
@@ -27,4 +28,12 @@ public:
 private:
   int punter_id;
   int64_t score;
+
+  friend class boost::serialization::access;
+  template <class Archive>
+    void serialize(Archive& ar, unsigned int /*version*/)
+    {
+      ar & punter_id;
+      ar & score;
+    }
 };
