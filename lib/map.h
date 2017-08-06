@@ -65,6 +65,7 @@ public:
     n_edges /= 2;
 
     edge2pid.resize(n_edges, -1);
+    pass_count = 0;
   }
 
   Error ApplyMove(const Map& map, Move move, bool verbose=false);
@@ -80,6 +81,7 @@ public:
 
 private:
   vector<int> edge2pid;
+  int pass_count;
 
   friend ostream& operator<<(ostream& stream, const MapState& map_state);
 
@@ -88,6 +90,7 @@ private:
     void serialize(Archive& ar, unsigned int /*version*/)
     {
       ar & edge2pid;
+      ar & pass_count;
     }
 };
 

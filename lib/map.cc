@@ -99,6 +99,7 @@ void Map::InitDists() {
 
 Error MapState::ApplyMove(const Map& map, Move move, bool verbose) {
   if (move.Type() == MoveType::kClaim) {
+    pass_count = 0;
     int src = map.SiteID(move.Source());
     int dest = map.SiteID(move.Target());
     for (const Edge& e : map.Graph()[src]) {
@@ -119,7 +120,28 @@ Error MapState::ApplyMove(const Map& map, Move move, bool verbose) {
               move.PunterID(), src, dest);
     }
     return kBad;
+  } else if (move.Type() == MoveType::kSplurge) {
+    pass_count = 0;
+    if (pass_count < (int)move.Route().size() - 1) {
+      if (verbose) {
+        fprintf(stderr, "Punter %d splurges %d length, but he has only %d pass count.\n",
+            move.PunterID(), (int)move.Route().size(), pass_count);
+      }
+      return kBad;
+    }
+    const vector<int> prev_edge2pid = edge2pid;
+    for (int i = 0; i < (int)move.Route().size() - 1; i++) {
+      Move one_move = Move::Claim(move.PunterID(), move.Route()[i], move.Route()[i + 1]);
+      Error nret = ApplyMove(map, one_move, verbose);
+      if (nret == kBad) {
+        // rollback
+        edge2pid = prev_edge2pid;
+        return kBad;
+      }
+    }
+    return kOk;
   } else {
+    pass_count++;
     return kOk;
   }
 }
