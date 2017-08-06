@@ -13,12 +13,21 @@ rm -f results/*.stdout
 rm -f results/*.jsonl
 rm -f results/*.csv
 
-# for map in randomMedium randomSparse tube; do
-for map in randomMedium; do
+for map in randomMedium randomSparse; do
   export PUNTER_LOG_FILE="results/replay.${map}.#{punter_id}.jsonl"
-  ./simulator/simulator "maps/${map}.json" ./random/punter ./greedy/punter ./roadrunner/punter > "results/${map}.stdout"
+  ./simulator/simulator "maps/${map}.json" ./{random,greedy,roadrunner}/punter > "results/${map}.stdout"
 
   echo 'random,greedy,roadrunner' > "results/${map}.csv"
+  tail -1 "results/${map}.stdout" \
+      | cut -d':' -f2- \
+      | python -c "import json; import sys; print(','.join(map(str, map(lambda s: s['score'], json.load(sys.stdin)))))" >> "results/${map}.csv"
+done
+
+for map in tube boston-sparse; do
+  export PUNTER_LOG_FILE="results/replay.${map}.#{punter_id}.jsonl"
+  ./simulator/simulator "maps/${map}.json" ./{random,greedy,roadrunner,greedy,random,roadrunner,greedy,roadrunner}/punter > "results/${map}.stdout"
+
+  echo 'random0,greedy1,roadrunner2,greedy3,random4,roadrunner5,greedy6,roadrunner7' > "results/${map}.csv"
   tail -1 "results/${map}.stdout" \
       | cut -d':' -f2- \
       | python -c "import json; import sys; print(','.join(map(str, map(lambda s: s['score'], json.load(sys.stdin)))))" >> "results/${map}.csv"
