@@ -7,6 +7,7 @@
 #include "map.h"
 #include "scoring.h"
 #include "ai_runner.h"
+#include "cout.h"
 
 using namespace std;
 
@@ -87,6 +88,7 @@ vector<int> Bfs(const Map& map, const MapState& map_state, int mine, int punter_
 
   queue<int> q;
   q.push(mine);
+  dist[mine] = 0;
 
   while (!q.empty()) {
     int site = q.front(); q.pop();
@@ -149,6 +151,7 @@ Move DecideByRoadRunner(const Game& game, const MapState& map_state, int my_roun
     ++n_not_our_mines;
     auto& mine = sites[i];
     vector<int> dist_to_the_mine = Bfs(map, map_state, mine.id, punter_id);
+    //cerr << "dist_to_the_mine[" << i << "]: " << dist_to_the_mine << endl;
 
     for (int k = 0; k < (int)sites.size(); ++k) {
       dist_to_any_mine_from_the_site[k] = min(
@@ -159,6 +162,7 @@ Move DecideByRoadRunner(const Game& game, const MapState& map_state, int my_roun
   }
 
   cerr << "n_our_mines = " << (n_all_mines - n_not_our_mines) << ", n_all_mines = " << n_all_mines << endl;
+  //cerr << "dist_to_any_mine_from_the_site: " << dist_to_any_mine_from_the_site << endl;
 
   int min_dist = INF;
   Move best_move = Move::Pass(punter_id);
