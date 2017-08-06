@@ -74,7 +74,6 @@ int main(int, char**) {
       }
     }
 
-
     for (auto& edges : game.Map().Graph()) {
       for (auto& edge : edges) {
         if (map_state.Claimer(edge.id) != -1) {
