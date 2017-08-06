@@ -46,7 +46,7 @@ int main(int, char**) {
     cerr << "GamePlay: state = " << protocol->State() << endl;
 
     Game game;
-    MapState map_state(game.Map());
+    MapState map_state;
     FromState(protocol->State(), &game, &map_state);
 
     auto sites = game.Map().Sites();

@@ -12,6 +12,21 @@
 
 using namespace std;
 
+string MakeState(const Game& game, const MapState& ms) {
+  std::stringstream ss;
+  boost::archive::text_oarchive oar(ss);
+  oar << game;
+  oar << ms;
+  return ss.str();
+}
+
+void FromState(const string& state, Game* game, MapState* ms) {
+  std::stringstream ss(state);
+  boost::archive::text_iarchive iar(ss);
+  iar >> *game;
+  iar >> *ms;
+}
+
 int main(int, char**) {
   auto name = "YAGI";
   auto protocol = make_unique<OfflineClientProtocol>();
@@ -21,30 +36,24 @@ int main(int, char**) {
 
   if (protocol->Phase() == GamePhase::kSetup) {
     auto game = protocol->Game();
-    std::stringstream ss;
-    boost::archive::text_oarchive oar(ss);
-    oar << game;
-    protocol->SetState(ss.str());
-    // cerr << ss.str() << endl;
+    MapState initial_map_state(game.Map());
+    protocol->SetState(MakeState(game, initial_map_state));
     protocol->Send();
   } else if (protocol->Phase() == GamePhase::kGamePlay) {
-    std::stringstream ss(protocol->State());
     Game game;
-    boost::archive::text_iarchive iar(ss);
-    iar >> game;
-    auto sites = game.Map().Sites();
-
-    unordered_set<int> lambdas;
-    for (auto site : sites) {
-      if (site.is_mine) {
-        lambdas.insert(site.id);
+    MapState map_state;
+    FromState(protocol->State(), &game, &map_state);
+    for (const Move& m : protocol->OtherMoves()) {
+      if (map_state.ApplyMove(game.Map(), m) != kOk) {
+        cerr << "Illegal move: " << m << endl;
+        continue;
       }
     }
 
     vector<Edge> candidates;
     for (auto edges : game.Map().Graph()) {
       for (auto edge : edges) {
-        if (lambdas.count(edge.src) || lambdas.count(edge.dest)) {
+        if (map_state.Claimer(edge.id) == -1) {
           candidates.push_back(edge);
         }
       }
@@ -55,15 +64,13 @@ int main(int, char**) {
     Random rand(dist(urandom));
     auto edge = candidates[rand.next((int)candidates.size())];
 
+    auto sites = game.Map().Sites();
     auto src = sites[edge.src].original_id;
     auto dest = sites[edge.dest].original_id;
     auto move = Move::Claim(game.PunterID(), src, dest);
 
     protocol->SetPlayerMove(move);
-    ss.clear();
-    boost::archive::text_oarchive oar(ss);
-    oar << game;
-    protocol->SetState(ss.str());
+    protocol->SetState(MakeState(game, map_state));
     protocol->Send();
   } else if (protocol->Phase() == GamePhase::kScoring) {
     for (auto score : protocol->Scores()) {

@@ -235,7 +235,7 @@ void DoGamePlay(OfflineClientProtocol* protocol) {
   cerr << "GamePlay: state = " << protocol->State() << endl;
 
   Game game;
-  MapState map_state(game.Map());
+  MapState map_state;
   int my_rounds;
   FromState(protocol->State(), &game, &map_state, &my_rounds);
 

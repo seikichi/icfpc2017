@@ -54,6 +54,7 @@ private:
 
 class MapState {
 public:
+  MapState() {;}
   explicit MapState(const Map& map) { Clear(map); }
 
   void Clear(const Map& map) {
