@@ -140,16 +140,30 @@ ofstream OpenLogStream(int punter_id, ios_base::openmode mode) {
 
 void WriteSetupLog(const Game& game) {
   if (IsLogMode()) {
+    auto map = game.Map();
+    int num_edges = 0;
+    for (auto edges: map.Graph()) {
+      num_edges += edges.size();
+    }
+    num_edges /= 2;
+
     ofstream stream = OpenLogStream(game.PunterID(), ios_base::out);
-    stream << "{\"punter\":" << game.PunterID() << ", \"punters\":" << game.PunterNum() << "}" << endl;
+    stream <<
+      "{" <<
+      "\"punter\":" << game.PunterID() << ", " <<
+      "\"punters\":" << game.PunterNum() << ", " <<
+      "\"num_nodes\":" << map.Sites().size() << ", " <<
+      "\"num_edges\":" << num_edges <<
+      "}" << endl;
   }
 }
 
 void WriteGamePlayLog(const Move& move, const vector<Move>& other_moves) {
   if (IsLogMode()) {
     ofstream stream = OpenLogStream(move.PunterID(), ios_base::app);
-    for (const Move &move : other_moves) {
-      stream << picojson::value(move.SerializeJson()).serialize() << endl;
+    for (int i = 0; i < (int)other_moves.size(); i++) {
+      auto m = other_moves[(move.PunterID() + i) % other_moves.size()];
+      stream << picojson::value(m.SerializeJson()).serialize() << endl;
     }
   }
 }
