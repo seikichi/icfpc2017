@@ -1,0 +1,25 @@
+#!/bin/bash
+
+set -eux
+
+export RELEASE=1
+
+for dir in random greedy roadrunner simulator; do
+  (cd "${dir}"; make clean; make)
+done
+
+mkdir -p results
+rm -f results/*.stdout
+rm -f results/*.jsonl
+rm -f results/*.csv
+
+# for map in randomMedium randomSparse tube; do
+for map in randomMedium; do
+  export PUNTER_LOG_FILE="results/replay.${map}.#{punter_id}.jsonl"
+  ./simulator/simulator "maps/${map}.json" ./random/punter ./greedy/punter ./roadrunner/punter > "results/${map}.stdout"
+
+  echo 'random,greedy,roadrunner' > "results/${map}.csv"
+  tail -1 "results/${map}.stdout" \
+      | cut -d':' -f2- \
+      | python -c "import json; import sys; print(','.join(map(str, map(lambda s: s['score'], json.load(sys.stdin)))))" >> "results/${map}.csv"
+done

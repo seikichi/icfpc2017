@@ -6,3 +6,9 @@ obj/
 \#*
 .\#*
 TAGS
+
+# misc
+tmp/
+
+# use this directory in CI
+results/
