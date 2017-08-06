@@ -1,6 +1,8 @@
 #include <iostream>
 #include <memory>
 #include <queue>
+#include <thread>
+#include <condition_variable>
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/serialization/serialization.hpp>
@@ -42,7 +44,53 @@ void DoSetup(OfflineClientProtocol* protocol) {
   protocol->Send();
 }
 
-Move AnyMove(Game& game, const MapState& map_state) {
+Move DecideByFallbackAi(const Game& game, const MapState& map_state) {
+  auto& sites = game.Map().Sites();
+  int punter_id = game.PunterID();
+
+  bool has_last_resort = false;
+  Move last_resort;
+
+  vector<bool> belongs_to_us(sites.size());
+  for (auto& edges : game.Map().Graph()) {
+    for (auto& edge : edges) {
+      if (map_state.Claimer(edge.id) == punter_id) {
+        belongs_to_us[edge.src] = true;
+        belongs_to_us[edge.dest] = true;
+      }
+    }
+  }
+
+  for (auto& edges : game.Map().Graph()) {
+    for (auto& edge : edges) {
+      if (map_state.Claimer(edge.id) != -1) {
+        continue;
+      }
+      if (!has_last_resort) {
+        auto src = sites[edge.src].original_id;
+        auto dest = sites[edge.dest].original_id;
+        last_resort = Move::Claim(punter_id, src, dest);
+        has_last_resort = true;
+      }
+      if (!game.Map().Sites()[edge.src].is_mine &&
+          !game.Map().Sites()[edge.dest].is_mine &&
+          !belongs_to_us[edge.src] &&
+          !belongs_to_us[edge.dest]) {
+        continue;
+      }
+      auto src = sites[edge.src].original_id;
+      auto dest = sites[edge.dest].original_id;
+      return Move::Claim(punter_id, src, dest);
+    }
+  }
+
+  if (has_last_resort)
+    return last_resort;
+
+  return Move::Pass(punter_id);
+}
+
+Move AnyMove(const Game& game, const MapState& map_state) {
   auto& sites = game.Map().Sites();
   int punter_id = game.PunterID();
   for (auto& edges : game.Map().Graph()) {
@@ -58,12 +106,11 @@ Move AnyMove(Game& game, const MapState& map_state) {
   return Move::Pass(punter_id);
 }
 
-Move Greedy(Game& game, const MapState& map_state) {
+Move Greedy(const Game& game, const MapState& map_state) {
   auto& sites = game.Map().Sites();
   int punter_id = game.PunterID();
 
   vector<bool> connected(game.Map().Sites().size());
-
   for (auto& edges : game.Map().Graph()) {
     for (auto& edge : edges) {
       if (map_state.Claimer(edge.id) == punter_id) {
@@ -135,7 +182,7 @@ vector<int> Bfs(const Map& map, const MapState& map_state, int mine, int punter_
   return dist;
 }
 
-Move Decide(Game& game, const MapState& map_state, int my_rounds) {
+Move DecideByRoadRunner(const Game& game, const MapState& map_state, int my_rounds) {
   auto& sites = game.Map().Sites();
   int punter_id = game.PunterID();
   const Map& map = game.Map();
@@ -231,6 +278,56 @@ Move Decide(Game& game, const MapState& map_state, int my_rounds) {
   return best_move;
 }
 
+Move RunAndDie(
+    OfflineClientProtocol* protocol,
+    const Game& game,
+    const MapState& map_state,
+    int my_rounds,
+    int timeout_millis) {
+
+  using namespace chrono;
+  steady_clock::time_point deadline = steady_clock::now() + milliseconds(timeout_millis);
+
+  condition_variable cv;
+  mutex mtx;
+  Move best_move;
+  bool done = false;
+
+  thread main_ai_thread([&best_move, &game, &map_state, my_rounds, &mtx, &cv, &done]() {
+      Move m = DecideByRoadRunner(game, map_state, my_rounds);
+
+      // 結果をメインスレッドに返す
+      {
+        unique_lock<mutex> lock(mtx);
+        best_move = m;
+        done = true;
+      }
+      cv.notify_one();
+  });
+
+  // メインスレッド側でフォールバック用moveを計算する
+  Move fallback_move = DecideByFallbackAi(game, map_state);
+
+  // MainAIを待つ
+  {
+    unique_lock<mutex> lock(mtx);
+    while (!done) {
+      if (cv.wait_until(lock, deadline) == cv_status::timeout) {
+        cerr << "MainAI timeout!! Fallback to weak AI.\n";
+        protocol->SetPlayerMove(fallback_move);
+        protocol->SetState(MakeState(game, map_state, my_rounds + 1));
+        protocol->Send();
+        quick_exit(0);
+      }
+    }
+  }
+
+  protocol->SetPlayerMove(best_move);
+  protocol->SetState(MakeState(game, map_state, my_rounds + 1));
+  protocol->Send();
+  quick_exit(0);
+}
+
 void DoGamePlay(OfflineClientProtocol* protocol) {
   cerr << "GamePlay: state = " << protocol->State() << endl;
 
@@ -246,10 +343,7 @@ void DoGamePlay(OfflineClientProtocol* protocol) {
     }
   }
 
-  protocol->SetPlayerMove(Decide(game, map_state, my_rounds));
-  protocol->SetState(MakeState(game, map_state, my_rounds + 1));
-
-  protocol->Send();
+  RunAndDie(protocol, game, map_state, my_rounds, 900);
 }
 
 void DoScoring(OfflineClientProtocol* protocol) {
