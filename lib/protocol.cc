@@ -1,10 +1,17 @@
 #include "protocol.h"
-#include <stdio.h>
+
+#include <cstdlib>
+#include <fstream>
 #include <memory>
+#include <stdio.h>
 #include "picojson.h"
 
 #include "strings.h"
 using namespace picojson;
+
+const string kLogFileEnvVar = "PUNTER_LOG_FILE";
+void WriteSetupLog(const Game& game);
+void WriteGamePlayLog(const Game& game, const picojson::object& json);
 
 GamePhase OfflineClientProtocol::Receive() {
   phase = GamePhase::kHandshake;
@@ -67,12 +74,14 @@ void OfflineClientProtocol::Send() {
     }
     l_ready["state"] = picojson::value(next_state);
     SendString(picojson::value(l_ready).serialize());
+    WriteSetupLog(game);
   } else if (phase == GamePhase::kGamePlay) {
     assert(next_state != "");
     assert(player_move.PunterID() != -1);
     picojson::object l_move = player_move.SerializeJson();
     l_move["state"] = picojson::value(next_state);
     SendString(picojson::value(l_move).serialize());
+    WriteGamePlayLog(json);
   } else {
     fprintf(stderr, "This Phase can't send\n");
   }
@@ -107,4 +116,42 @@ void ClientProtocol::SendName() {
   l_name["me"] = picojson::value(player_name);
   string str = picojson::value(l_name).serialize();
   SendString(str);
+}
+
+bool IsLogMode() {
+  auto env = getenv(kLogFileEnvVar.c_str());
+  return env != nullptr;
+}
+
+ofstream OpenLogStream(int punter_id, ios_base::openmode mode) {
+  auto env = getenv(kLogFileEnvVar.c_str());
+  assert(env != nullptr);
+
+  // auto filename = ReplaceString(env, "#{punter_id}", to_string(punter_id));
+  auto filename = to_string(env);
+  std::ofstream stream;
+  stream.open(filename, mode);
+  assert(!stream.fail());
+
+  return stream;
+}
+
+void WriteSetupLog(const Game& game) {
+  if (IsLogMode()) {
+    ofstream stream = OpenLogStream(game.PunterID(), ios_base::out);
+    stream << "{\"punter\":" << game.PunterID() << ", \"punters\":" << game.PunterNum() << "}" << endl;
+  }
+}
+
+void WriteGamePlayLog(int punter_id) {
+  if (IsLogMode()) {
+    Game game;
+    game.Deserialize(state);
+
+    ofstream stream = OpenLogStream(game.PunterID(), ios_base::app);
+    const auto &l_moves = json.at("move").get<picojson::object>().at("moves").get<picojson::array>();
+    for (const value &v : l_moves) {
+      stream << v.serialize() << endl;
+    }
+  }
 }
