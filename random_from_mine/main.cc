@@ -25,6 +25,7 @@ void FromState(const string& state, Game* game, MapState* ms) {
   boost::archive::text_iarchive iar(ss);
   iar >> *game;
   iar >> *ms;
+  game->RecoverFromDeserialize();
 }
 
 Move AnyMove(const Game& game, const MapState& map_state) {

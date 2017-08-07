@@ -36,9 +36,9 @@ public:
   bool Deserialize(const picojson::object &json);
   std::string SerializeString(bool prettify = false) const;
   picojson::object SerializeJson() const;
+  void InitDists();
 
 private:
-  void InitDists();
   vector<Site> sites;
   vector<Site> mines;
   vector<Edges> graph;
@@ -54,7 +54,6 @@ private:
       ar & graph;
       ar & mines;
       ar & site_id_map;
-      ar & dists;
       ar & edge_num;
     }
 };

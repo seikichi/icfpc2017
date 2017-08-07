@@ -43,6 +43,7 @@ void FromState(const string& state, Game* game, MapState* ms, int* my_rounds) {
   iar >> *game;
   iar >> *ms;
   iar >> *my_rounds;
+  game->RecoverFromDeserialize();
 }
 
 void DoSetup(OfflineClientProtocol* protocol) {

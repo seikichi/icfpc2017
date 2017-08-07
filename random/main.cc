@@ -25,6 +25,7 @@ void FromState(const string& state, Game* game, MapState* ms) {
   boost::archive::text_iarchive iar(ss);
   iar >> *game;
   iar >> *ms;
+  game->RecoverFromDeserialize();
 }
 
 int main(int, char**) {

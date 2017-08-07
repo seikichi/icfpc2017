@@ -60,6 +60,7 @@ TEST(game, boost_serialize) {
   boost::archive::text_iarchive ar2(ss);
   Game game2;
   ar2 >> game2;
+  game2.RecoverFromDeserialize();
 
   ASSERT_EQ(game2.PunterID(), 1);
   ASSERT_EQ(game2.PunterNum(), 2);

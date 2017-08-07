@@ -23,6 +23,7 @@ public:
   int PunterNum() const { return punter_num; }
   const ::Map &Map() const { return map; }
   const ::Setting &Setting() const { return setting; }
+  void RecoverFromDeserialize() { map.InitDists();  }
 
   bool Deserialize(const string &json);
   bool Deserialize(const picojson::object &json);
