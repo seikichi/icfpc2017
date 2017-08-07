@@ -290,7 +290,7 @@ vector<vector<int>> FindBridge(const Game &game, MapState temp_map_state, int cn
         }
       }
     }
-    if (max_edge_importance < n) { break; }
+    // if (max_edge_importance * 100 < n) { break; }
     ret.push_back(edge_importance);
     // 自分以外のプレイヤーが取った事にする
     temp_map_state.ApplyMove(game.Map(), Move::Claim((game.PunterID() + 1) % game.PunterNum(), target_edge.src, target_edge.dest));
@@ -318,7 +318,7 @@ Move DecideByBridge(const Game &game, const MapState &map_state, int my_rounds) 
       }
     }
   }
-  if (max_edge_importance < game.Map().Size()) { return Move::Pass(game.PunterID()); }
+  if (max_edge_importance * 1000 < game.Map().Size()) { return Move::Pass(game.PunterID()); }
 
   return Move::Claim(game.PunterID(), game.Map().Sites()[target_edge.src].original_id, game.Map().Sites()[target_edge.dest].original_id);
 }
