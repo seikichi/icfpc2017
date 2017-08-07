@@ -138,8 +138,23 @@ Error MapState::ApplyMove(const Map& map, Move move, bool verbose) {
     const vector<int> prev_edge2pid = edge2pid;
     const int prev_pass_count = pass_count[move.PunterID()];
     for (int i = 0; i < (int)move.Route().size() - 1; i++) {
-      // If this river is not claimed yet, this will work as Claim
-      Move one_move = Move::Option(move.PunterID(), move.Route()[i], move.Route()[i + 1]);
+
+      bool is_claimed = false;
+      for(const Edge& e : map.Graph()[move.Route()[i]]) { 
+        if (e.dest == move.Route()[i+1]) {
+          if (edge2pid[e.id] != -1) {
+            is_claimed = true;
+          }
+          break;
+        }
+      }
+
+      Move one_move;
+      if (is_claimed) {
+        one_move = Move::Option(move.PunterID(), move.Route()[i], move.Route()[i + 1]);
+      } else {
+        one_move = Move::Claim(move.PunterID(), move.Route()[i], move.Route()[i + 1]);
+      }
       Error nret = ApplyMove(map, one_move, verbose);
       if (nret == kBad) {
         // rollback
@@ -157,10 +172,10 @@ Error MapState::ApplyMove(const Map& map, Move move, bool verbose) {
       if (e.dest == dest) {
         if (edge2pid[e.id] == -1) {
           if (verbose) {
-            fprintf(stderr, "The river (%d -> %d) is not claimed yet, so treated as normal claim by punter %d.\n",
+            fprintf(stderr, "The river (%d -> %d) is not claimed yet, so treated as pass %d.\n",
                 src, dest, move.PunterID());
           }
-          return ApplyMove(map, Move::Claim(move.PunterID(), src, dest));
+          goto move_bad;
         } else if (option_count[move.PunterID()] >= num_of_mines) {
           if (verbose) {
             fprintf(stderr, "Punter %d already bought %d rivers, so the punter cannot buy option any more.\n",
