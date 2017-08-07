@@ -10,6 +10,7 @@ enum class MoveType {
   kClaim,
   kPass,
   kSplurge,
+  kOption,
 };
 
 class Move {
@@ -25,6 +26,10 @@ public:
 
   static Move Splurge(int punter_id, const std::vector<int> &route) {
     return Move(MoveType::kSplurge, punter_id, -1, -1, route);
+  }
+
+  static Move Option(int punter_id, int source, int target) {
+    return Move(MoveType::kOption, punter_id, source, target, std::vector<int>());
   }
 
 
@@ -67,6 +72,15 @@ public:
       picojson::object k;
       k["splurge"] = picojson::value(j);
       return k;
+    } else if (type == MoveType::kOption) {
+      picojson::object j;
+      j["punter"] = picojson::value((double)punter_id);
+      j["source"] = picojson::value((double)source);
+      j["target"] = picojson::value((double)target);
+
+      picojson::object k;
+      k["option"] = picojson::value(j);
+      return k;
     } else {
       assert(false);
     }
@@ -95,6 +109,12 @@ public:
         route.emplace_back((int)v.get<double>());
       }
       return Move::Splurge(punter_id, route);
+    } else if (json.find("option") != json.end()) {
+      auto o = json.at("option").get<picojson::object>();
+      int punter_id = (int)o.at("punter").get<double>();
+      int source = (int)o.at("source").get<double>();
+      int target = (int)o.at("target").get<double>();
+      return Move::Option(punter_id, source, target);
     } else {
       assert(false);
     }
@@ -130,6 +150,9 @@ inline std::ostream& operator<<(std::ostream& stream, const Move& move) {
     break;
   case MoveType::kPass:
     stream << "Pass";
+    break;
+  case MoveType::kOption:
+    stream << "Option(" << move.Source() << ", " << move.Target() << ")";
     break;
   default:
     assert(false);

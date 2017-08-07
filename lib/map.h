@@ -66,7 +66,9 @@ public:
 
   void Clear(const Map& map, int punter_num) {
     edge2pid.resize(map.EdgeNum(), -1);
+    option2pid.resize(map.EdgeNum(), -1);
     pass_count.resize(punter_num, 0);
+    option_count.resize(punter_num, 0);
   }
 
   Error ApplyMove(const Map& map, Move move, bool verbose=false);
@@ -79,13 +81,19 @@ public:
   }
   const vector<vector<int>> &EdgeImportances() const { return edge_importances; }
 
+  int OptionHolder(int edge_id) const {
+    return option2pid[edge_id];
+  }
+
   picojson::object SerializeJson() const;
   void Deserialize(const picojson::object& json);
 
 private:
   vector<int> edge2pid;
   vector<vector<int>> edge_importances;
+  vector<int> option2pid;
   vector<int> pass_count;
+  vector<int> option_count;
 
   friend ostream& operator<<(ostream& stream, const MapState& map_state);
 
@@ -94,7 +102,9 @@ private:
     void serialize(Archive& ar, unsigned int /*version*/)
     {
       ar & edge2pid;
+      ar & option2pid;
       ar & pass_count;
+      ar & option_count;
       ar & edge_importances;
     }
 };

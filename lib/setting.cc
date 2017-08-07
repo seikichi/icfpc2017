@@ -9,12 +9,15 @@ bool Setting::Deserialize(const string &json) {
 bool Setting::Deserialize(const picojson::object &json) {
   Clear();
   exist = true;
-  // {"futures" : true, "splurges": true}
+  // {"futures" : true, "splurges": true, "options": true}
   if (json.count("futures")) {
     futures = json.at("futures").get<bool>();
   }
   if (json.count("splurges")) {
     splurges = json.at("splurges").get<bool>();
+  }
+  if (json.count("options")) {
+    options = json.at("options").get<bool>();
   }
   return true;
 }
@@ -30,6 +33,9 @@ picojson::object Setting::SerializeJson() const {
   }
   if (splurges) {
     l_setting["splurges"] = picojson::value(true);
+  }
+  if (options) {
+    l_setting["options"] = picojson::value(true);
   }
   return l_setting;
 }
