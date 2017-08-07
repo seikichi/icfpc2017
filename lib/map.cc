@@ -88,18 +88,17 @@ void Map::InitDists() {
   dists = vector<vector<int>>(Size(), vector<int>(Size(), 1 << 29));
   for (int start = 0; start < Size(); start++) {
     dists[start][start] = 0;
-    queue<pair<int, int>> que;
-    que.push(make_pair(start, 0));
+    queue<int> que;
+    que.push(start);
     while (!que.empty()) {
-      int from = que.front().first;
-      int d = que.front().second;
+      int from = que.front();
       que.pop();
       for (const auto &edge : graph[from]) {
         int to = edge.dest;
-        int nd = d + 1;
+        int nd = dists[start][from] + 1;
         if (dists[start][to] <= nd) { continue; }
         dists[start][to] = nd;
-        que.push(make_pair(to, nd));
+        que.push(to);
       }
     }
   }
