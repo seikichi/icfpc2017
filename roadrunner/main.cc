@@ -295,8 +295,7 @@ Move DecideByRoadRunner(const Game& game, const MapState& map_state, int my_roun
   // ただし、初期選択した頂点につなげれない場合は諦める
   {
     int min_edge = 100;
-    for (const auto &site : map.Sites()) {
-      if (!site.is_mine) { continue; }
+    for (const auto &site : map.Mines()) {
       if (self_ufind.FindSet(site.id, from_mine)) { continue; }
       if (usable_edge_count[self_ufind.Root(site.id)] > 5) { continue; }
       if (!usable_ufind.FindSet(site.id, from_mine)) { continue; }

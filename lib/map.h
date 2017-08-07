@@ -19,11 +19,13 @@ public:
   void Clear() {
     sites.clear();
     graph.clear();
+    mines.clear();
     site_id_map.clear();
     dists.clear();
   }
   int Size() const { return site_id_map.size(); }
   const vector<Site> &Sites() const { return sites; }
+  const vector<Site> &Mines() const { return mines; }
   const vector<Edges> &Graph() const { return graph; }
 
   int Dist(int from, int to) const { return dists[from][to]; }
@@ -37,6 +39,7 @@ public:
 private:
   void InitDists();
   vector<Site> sites;
+  vector<Site> mines;
   vector<Edges> graph;
   map<int, int> site_id_map;
   vector<vector<int>> dists;
@@ -47,6 +50,7 @@ private:
     {
       ar & sites;
       ar & graph;
+      ar & mines;
       ar & site_id_map;
       ar & dists;
     }
