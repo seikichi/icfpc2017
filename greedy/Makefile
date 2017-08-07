@@ -17,7 +17,13 @@ CXXFLAGS = $(OVERALL_OPTIONS) $(LANGUAGE_OPTIONS) $(WARNING_OPTIONS) $(OPTIMIZAT
            $(CODE_GENERATION_OPTIONS) $(PREPROCESSOR_OPTIONS) $(DEBUGGING_OPTIONS)
 
 LDFLAGS = -fsanitize=address
-LIBS = -lm -lboost_serialization
+# LIBS = -lm -lboost_serialization
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Linux)
+	LIBS = -lm /usr/lib/x86_64-linux-gnu/libboost_serialization.a
+else
+  LIBS = -lm /usr/local/lib/libboost_serialization.a
+endif
 
 SOURCES = $(wildcard ./*.cc)
 OBJECTS = $(patsubst ./%.cc, obj/main/%.o, $(SOURCES))
