@@ -70,6 +70,7 @@ TEST(field, boost_serialize) {
   boost::archive::text_iarchive ar2(ss);
   Map field2;
   ar2 >> field2;
+  field2.InitDists();
 
   const vector<Site> &sites = field2.Sites();
   const Graph &g = field2.Graph();
