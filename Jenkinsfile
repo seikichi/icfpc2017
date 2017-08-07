@@ -50,6 +50,12 @@ pipeline {
               sh 'make'
             }
           },
+          roadrunner: {
+            dir('roadrunner') {
+              sh 'make clean'
+              sh 'make'
+            }
+          },
           failFast: false)
       }
     }
