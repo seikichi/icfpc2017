@@ -252,7 +252,7 @@ int main(int argc, char** argv) {
 
   auto states = DoSetup(punters, map, false);
 
-  MapState map_state(map);
+  MapState map_state(map, punters.size());
   DoGame(punters, map, false, &states, &map_state);
   cout << "Map State: " << map_state << endl;
 
