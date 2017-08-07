@@ -124,7 +124,7 @@ string OfflineClientProtocol::ReceiveString() {
 
 // stateのシリアライズ・パースが一番重たいので手動でやる
 void OfflineClientProtocol::SendStringWithState(const string &str, const string &state) {
-  string temp = str.substr(0, str.size() - 2);
+  string temp = str.substr(0, str.size() - 1);
   temp += ",\"state\":\"" + state + "\"}";
   SendString(temp);
 }
