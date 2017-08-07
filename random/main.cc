@@ -36,7 +36,7 @@ int main(int, char**) {
 
   if (protocol->Phase() == GamePhase::kSetup) {
     auto game = protocol->Game();
-    MapState initial_map_state(game.Map());
+    MapState initial_map_state(game.Map(), game.PunterNum());
     protocol->SetState(MakeState(game, initial_map_state));
     protocol->Send();
   } else if (protocol->Phase() == GamePhase::kGamePlay) {
