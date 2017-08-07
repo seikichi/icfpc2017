@@ -44,6 +44,10 @@ bool Map::Deserialize(const picojson::object &json) {
     sites[index].setMine(true);
     assert(id == sites[index].original_id);
   }
+
+  for (const auto &site : sites) {
+    if (site.is_mine) { mines.push_back(site); }
+  }
   InitDists();
   return true;
 }

@@ -233,7 +233,7 @@ int ChooseBestMine(const Game& game) {
       ++n_reachable_sites;
       if (sites[k].is_mine)
         ++n_reachable_mines;
-      sum_dist = dist;
+      sum_dist += dist;
     }
 
     pair<int, int> score = make_pair(n_reachable_sites * n_reachable_mines, -sum_dist);
@@ -293,15 +293,19 @@ Move DecideByRoadRunner(const Game& game, const MapState& map_state, int my_roun
 
   // mineから出る辺が無くなりそうだったら抑えておく
   // ただし、初期選択した頂点につなげれない場合は諦める
-  for (const auto &site : map.Sites()) {
-    if (!site.is_mine) { continue; }
-    if (self_ufind.FindSet(site.id, from_mine)) { continue; }
-    if (usable_edge_count[self_ufind.Root(site.id)] > 3) { continue; }
-    if (!usable_ufind.FindSet(site.id, from_mine)) { continue; }
-    fprintf(stderr, "Change from_mine, %d %d\n", site.id, usable_edge_count[self_ufind.Root(site.id)]);
-    assert(usable_edge_count[self_ufind.Root(site.id)] != 0);
-    from_mine = site.id;
-    break;
+  {
+    int min_edge = 100;
+    for (const auto &site : map.Mines()) {
+      if (self_ufind.FindSet(site.id, from_mine)) { continue; }
+      if (usable_edge_count[self_ufind.Root(site.id)] > 5) { continue; }
+      if (!usable_ufind.FindSet(site.id, from_mine)) { continue; }
+      assert(usable_edge_count[self_ufind.Root(site.id)] != 0);
+      if (usable_edge_count[self_ufind.Root(site.id)] < min_edge) {
+        fprintf(stderr, "Change from_mine, %d %d\n", site.id, usable_edge_count[self_ufind.Root(site.id)]);
+        from_mine = site.id;
+        min_edge = usable_edge_count[self_ufind.Root(site.id)];
+      }
+    }
   }
 
 
