@@ -6,9 +6,9 @@ OVERALL_OPTIONS = -pipe
 LANGUAGE_OPTIONS = -std=c++14
 WARNING_OPTIONS = -Wall -Wextra -Woverloaded-virtual -Werror
 ifdef RELEASE
-  OPTIMIZATION_OPTIONS = -O3 -fno-omit-frame-pointer -march=native -mtune=native
+  OPTIMIZATION_OPTIONS = -O3 -fno-omit-frame-pointer
 else
-  OPTIMIZATION_OPTIONS = -O1 -fno-omit-frame-pointer -march=native -mtune=native
+  OPTIMIZATION_OPTIONS = -O1 -fno-omit-frame-pointer
 endif
 CODE_GENERATION_OPTIONS = -fPIC -pthread
 PREPROCESSOR_OPTIONS = -MMD -MP -I../lib -I../vendor/picojson
