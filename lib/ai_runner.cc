@@ -87,6 +87,7 @@ void RunAiWithTimeoutAndDie(
 
   using namespace chrono;
   steady_clock::time_point deadline = steady_clock::now() + milliseconds(timeout_millis);
+  //cerr << "deadline: " << deadline.time_since_epoch().count() << endl;
 
   // state から状態を復元
   Game game;
@@ -126,7 +127,11 @@ void RunAiWithTimeoutAndDie(
       Move m = DecideByFallbackAi(game, map_state);
 
       // デッドラインまで待つ
-      while (steady_clock::now() >= deadline) {
+      for (;;) {
+        auto now = steady_clock::now();
+        //cerr << "now: " << steady_clock::now().time_since_epoch().count() << endl;
+        if (now >= deadline)
+          break;
         this_thread::sleep_for(milliseconds(50));
       }
 
