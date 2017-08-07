@@ -179,6 +179,7 @@ void WriteGamePlayLog(const Move& move, const vector<Move>& other_moves) {
 void WriteStopLog(const picojson::object& json) {
   if (IsLogMode() && IsSingleLogMode()) {
     ofstream stream = OpenLogStream(0, ios_base::app);
-    stream << picojson::value(json).serialize() << endl;
+    const auto &stop = json.at("stop");
+    stream << "{\"stop\": " << stop.serialize() << "}" << endl;
   }
 }
