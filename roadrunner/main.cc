@@ -313,7 +313,7 @@ Move DecideByBridge(const Game &game, const MapState &map_state, int my_rounds) 
 }
 
 Move DecideByRoadRunner(const Game& game, const MapState& map_state, int my_rounds) {
-  if (my_rounds < 2 && game.Map().Size() < 300) {
+  if (my_rounds < 2 && game.Map().Size() < 500) {
     Move move = DecideByBridge(game, map_state, my_rounds);
     if (move.Type() != MoveType::kPass) { return move; }
   }
