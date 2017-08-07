@@ -87,6 +87,7 @@ void RunAiWithTimeoutAndDie(
 
   using namespace chrono;
   steady_clock::time_point deadline = steady_clock::now() + milliseconds(timeout_millis);
+  //cerr << "deadline: " << deadline.time_since_epoch().count() << endl;
 
   // state から状態を復元
   Game game;
@@ -113,27 +114,44 @@ void RunAiWithTimeoutAndDie(
       // 結果をメインスレッドに返す
       {
         unique_lock<mutex> lock(mtx);
-        best_move = m;
-        done = true;
+        if (!done) {
+          best_move = m;
+          done = true;
+        }
       }
       cv.notify_one();
   });
 
-  // メインスレッド側でフォールバック用moveを計算する
-  Move fallback_move = DecideByFallbackAi(game, map_state);
+  thread fallback_thread([&best_move, deadline, &game, &map_state, &mtx, &cv, &done]() {
+      // フォールバック用moveを計算する
+      Move m = DecideByFallbackAi(game, map_state);
 
-  // MainAIを待つ
+      // デッドラインまで待つ
+      for (;;) {
+        auto now = steady_clock::now();
+        //cerr << "now: " << steady_clock::now().time_since_epoch().count() << endl;
+        if (now >= deadline)
+          break;
+        this_thread::sleep_for(milliseconds(50));
+      }
+
+      // MainAI がまだ終わってなければ結果を返す
+      {
+        unique_lock<mutex> lock(mtx);
+        if (!done) {
+          cerr << "MainAI timeout!! Fallback to weak AI.\n";
+          best_move = m;
+          done = true;
+        }
+      }
+      cv.notify_one();
+  });
+
+  // 待つ
   {
     unique_lock<mutex> lock(mtx);
     while (!done) {
-      if (cv.wait_until(lock, deadline) == cv_status::timeout) {
-        cerr << "MainAI timeout!! Fallback to weak AI.\n";
-        // 結果を送信して死ぬ
-        protocol->SetPlayerMove(fallback_move);
-        protocol->SetState(MakeState(game, map_state, my_rounds + 1));
-        protocol->Send();
-        _exit(0);
-      }
+      cv.wait(lock);
     }
   }
 
