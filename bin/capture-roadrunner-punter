@@ -1,5 +1,6 @@
 #!/bin/sh
 
-echo 'After you see this message, use /tmp/roadrunner.stdin.log (e.g., time ./roadrunner/puntr < /tmp/roadrunner.stdin.log > /dev/null )' >&2
+DATE=$(date +%s)
+echo "After you see this message, use /tmp/roadrunner.${DATE}.stdin.log (e.g., time ./roadrunner/puntr < /tmp/roadrunner.stdin.log > /dev/null )" >&2
 PARENT=$(cd $(dirname $0)/.. && pwd)
-tee /tmp/roadrunner.stdin.log | $PARENT/roadrunner/punter
+tee "/tmp/roadrunner.${DATE}.stdin.log" | $PARENT/roadrunner/punter
