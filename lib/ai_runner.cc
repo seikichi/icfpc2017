@@ -1,26 +1,45 @@
 #include <thread>
 #include <condition_variable>
 #include <unistd.h>
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
 #include <boost/serialization/serialization.hpp>
 #include "protocol.h"
 #include "strings.h"
 #include "map.h"
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/iterators/binary_from_base64.hpp>
+#include <boost/archive/iterators/base64_from_binary.hpp>
+#include <boost/archive/iterators/transform_width.hpp>
+using namespace boost::archive::iterators;
 using namespace std;
 
-string MakeState(const Game& game, const MapState& ms, int my_rounds) {
-  std::stringstream ss;
-  boost::archive::text_oarchive oar(ss);
-  oar << game;
-  oar << ms;
-  oar << my_rounds;
+string encode64(const string& value) {
+  typedef base64_from_binary<transform_width<const char *, 6, 8> > base64_enc;
+  stringstream ss;
+  copy(base64_enc(value.c_str()), base64_enc(value.c_str() + value.size()), ostream_iterator<char>(ss));
   return ss.str();
 }
 
+string decode64(const string& value) {
+  auto raw = ReplaceString(value, "\\", "");
+  typedef transform_width<binary_from_base64<const char *>, 8, 6, char> base64_dec;
+  stringstream ss;
+  copy(base64_dec(raw.c_str()), base64_dec(raw.c_str() + raw.size()), ostream_iterator<char>(ss));
+  return ss.str();
+}
+
+string MakeState(const Game& game, const MapState& ms, int my_rounds) {
+  std::stringstream ss;
+  boost::archive::binary_oarchive oar(ss);
+  oar << game;
+  oar << ms;
+  oar << my_rounds;
+  return encode64(ss.str());
+}
+
 void FromState(const string& state, Game* game, MapState* ms, int* my_rounds) {
-  std::stringstream ss(state);
-  boost::archive::text_iarchive iar(ss);
+  std::stringstream ss(decode64(state));
+  boost::archive::binary_iarchive iar(ss);
   iar >> *game;
   iar >> *ms;
   iar >> *my_rounds;
