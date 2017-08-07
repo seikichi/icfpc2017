@@ -183,7 +183,7 @@ Move Greedy(const Game& game, const MapState& map_state) {
 
 
 // mine から各サイトへの距離の配列を返す
-vector<int> Bfs(const Map& map, const MapState& map_state, int mine, int punter_id) {
+vector<int> Bfs(const Map& map, const MapState& map_state, int mine, int punter_id, int ban_site_id = -1) {
   vector<int> dist(map.Sites().size(), INF);
 
   priority_queue<pair<int, int>> q;
@@ -194,6 +194,7 @@ vector<int> Bfs(const Map& map, const MapState& map_state, int mine, int punter_
     int site = q.top().second;
     q.pop();
     for (const Edge& e : map.Graph()[site]) {
+      if (e.dest == ban_site_id) { continue; }
       if (map_state.Claimer(e.id) != -1 && map_state.Claimer(e.id) != punter_id)
         continue;
       int new_dist = dist[site];
@@ -246,20 +247,87 @@ int ChooseBestMine(const Game& game) {
   return best_mine;
 }
 
+vector<vector<int>> FindBridge(const Game &game, MapState temp_map_state, int cnt) {
+  const int n = game.Map().Size();
+  const Graph graph = game.Map().Graph();
+  int best_mine = ChooseBestMine(game);
+  vector<vector<int>> ret;
+  for (int i = 0; i < cnt; i++) {
+    vector<int> prev_dist = Bfs(game.Map(), temp_map_state, best_mine, game.PunterID(), -1);
+    vector<int> ban_site_dists_sum(n, 0);
+    for (const auto &ban_site : game.Map().Sites()) {
+      vector<int> dists = Bfs(game.Map(), temp_map_state, best_mine, game.PunterID(), ban_site.id);
+      for (const auto &mine : game.Map().Mines()) {
+        if (prev_dist[mine.id] > n) { continue; }
+        else if (dists[mine.id] > n) {
+          ban_site_dists_sum[ban_site.id] += n;
+        } else {
+          ban_site_dists_sum[ban_site.id] += dists[mine.id] - prev_dist[mine.id];
+        }
+      }
+    }
+    Edge target_edge;
+    int max_edge_importance = 0;
+    vector<int> edge_importance(game.Map().EdgeNum(), 0);
+    for (const auto &edges : graph) {
+      for (const auto &edge : edges) {
+        if (temp_map_state.Claimer(edge.id) != -1) { continue; }
+        edge_importance[edge.id] = min(ban_site_dists_sum[edge.src], ban_site_dists_sum[edge.dest]);
+        if (edge_importance[edge.id] > max_edge_importance) {
+          target_edge = edge;
+          max_edge_importance = edge_importance[edge.id];
+        }
+      }
+    }
+    if (max_edge_importance < n) { break; }
+    ret.push_back(edge_importance);
+    // 自分以外のプレイヤーが取った事にする
+    temp_map_state.ApplyMove(game.Map(), Move::Claim((game.PunterID() + 1) % game.PunterNum(), target_edge.src, target_edge.dest));
+  }
+  return ret;
+}
+
+Move DecideByBridge(const Game &game, const MapState &map_state, int my_rounds) {
+  MapState temp_map_state = map_state;
+  if (my_rounds == 0) {
+    // 一手目は初期状態でやる
+    temp_map_state = MapState(game.Map());
+  }
+  vector<vector<int>> edge_importances = FindBridge(game, temp_map_state, 1);
+  if (edge_importances.size() == 0) { return Move::Pass(game.PunterID()); }
+
+  Edge target_edge;
+  int max_edge_importance = -1;
+  for (const auto &edges : game.Map().Graph()) {
+    for (const auto &edge : edges) {
+      if (map_state.Claimer(edge.id) != -1) { continue; }
+      if (edge_importances[0][edge.id] > max_edge_importance) {
+        target_edge = edge;
+        max_edge_importance = edge_importances[0][edge.id];
+      }
+    }
+  }
+  if (max_edge_importance < game.Map().Size()) { return Move::Pass(game.PunterID()); }
+
+  return Move::Claim(game.PunterID(), game.Map().Sites()[target_edge.src].original_id, game.Map().Sites()[target_edge.dest].original_id);
+}
+
 Move DecideByRoadRunner(const Game& game, const MapState& map_state, int my_rounds) {
+  if (my_rounds < 2 && game.Map().Size() < 300) {
+    Move move = DecideByBridge(game, map_state, my_rounds);
+    if (move.Type() != MoveType::kPass) { return move; }
+  }
+
   auto& sites = game.Map().Sites();
   int punter_id = game.PunterID();
   const Map& map = game.Map();
 
   // あと何回行動できるのかを計算する
-  int n_rounds = 0;
-  for (const auto& es : map.Graph()) {
-    n_rounds += (int)es.size();
-  }
-  assert(n_rounds % 2 == 0);
-  n_rounds /= 2;
+  int n_rounds = map.EdgeNum();
   int all_my_rounds = n_rounds / game.PunterNum() + (int)(punter_id < n_rounds % game.PunterNum());
   int remaining_rounds = all_my_rounds - my_rounds;
+
+
 
   // サイトiを自分たちが取っている(繋いでいる)かどうか
   UnionFind self_ufind(map.Size());

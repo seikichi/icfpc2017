@@ -24,7 +24,7 @@ bool Map::Deserialize(const picojson::object &json) {
   const int n = site_id_map.size();
   graph = ::Graph(n);
   auto l_rivers = json.at("rivers").get<picojson::array>();
-  int edge_num = 0;
+  edge_num = 0;
   for (const value &v : l_rivers) {
     // {"source" : SiteId, "target" : SiteId}
     auto o = v.get<object>();
