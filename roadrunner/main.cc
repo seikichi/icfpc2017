@@ -191,7 +191,7 @@ vector<int> Bfs(const Map& map, const MapState& map_state, int mine, int punter_
   que.push(mine);
   dist[mine] = 0;
 
-  while (!que.empty() && !zero_que.empty()) {
+  while (!que.empty() || !zero_que.empty()) {
     int site = -1;
     if (!zero_que.empty()) {
       site = zero_que.front();
