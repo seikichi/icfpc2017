@@ -101,10 +101,12 @@ string OfflineClientProtocol::ReceiveString() {
   int size = fread(buffer.get(), sizeof(char), json_size, stdin);
   buffer[size] = 0;
   string ret = string(buffer.get());
+  cerr << "RECEIVE:" << ret.substr(0, 80) << endl;
   return ret;
 }
 
 void OfflineClientProtocol::SendString(const string &str) {
+  cerr << "SEND:" << str.substr(0, 80) << endl;
   printf("%lu:%s", str.size(), str.c_str());
   fflush(stdout);
 }

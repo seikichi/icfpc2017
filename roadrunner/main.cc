@@ -291,7 +291,7 @@ Move DecideByBridge(const Game &game, const MapState &map_state, int my_rounds) 
   MapState temp_map_state = map_state;
   if (my_rounds == 0) {
     // 一手目は初期状態でやる
-    temp_map_state = MapState(game.Map());
+    temp_map_state = MapState(game.Map(), game.PunterNum());
   }
   vector<vector<int>> edge_importances = FindBridge(game, temp_map_state, 1);
   if (edge_importances.size() == 0) { return Move::Pass(game.PunterID()); }

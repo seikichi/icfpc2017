@@ -29,7 +29,7 @@ void FromState(const string& state, Game* game, MapState* ms, int* my_rounds) {
 void DoSetup(OfflineClientProtocol* protocol) {
   auto game = protocol->Game();
 
-  MapState initial_map_state(game.Map());
+  MapState initial_map_state(game.Map(), game.PunterNum());
   protocol->SetState(MakeState(game, initial_map_state, 0));
   protocol->Send();
 }

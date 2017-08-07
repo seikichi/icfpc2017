@@ -107,7 +107,6 @@ void Map::InitDists() {
 
 Error MapState::ApplyMove(const Map& map, Move move, bool verbose) {
   if (move.Type() == MoveType::kClaim) {
-    pass_count = 0;
     int src = map.SiteID(move.Source());
     int dest = map.SiteID(move.Target());
     for (const Edge& e : map.Graph()[src]) {
@@ -117,41 +116,51 @@ Error MapState::ApplyMove(const Map& map, Move move, bool verbose) {
             fprintf(stderr, "Punter %d claimed river (%d -> %d), but it already claimed by punter %d.\n",
                     move.PunterID(), src, dest, edge2pid[e.id]);
           }
-          return kBad;
+          goto move_bad;
         }
         edge2pid[e.id] = move.PunterID();
-        return kOk;
+        goto move_ok;
       }
     }
     if (verbose) {
       fprintf(stderr, "Punter %d claimed river (%d -> %d), but there are no such rivers.\n",
               move.PunterID(), src, dest);
     }
-    return kBad;
+    goto move_bad;
   } else if (move.Type() == MoveType::kSplurge) {
-    pass_count = 0;
-    if (pass_count < (int)move.Route().size() - 1) {
+    if (pass_count[move.PunterID()] < (int)move.Route().size() - 1) {
       if (verbose) {
         fprintf(stderr, "Punter %d splurges %d length, but he has only %d pass count.\n",
-            move.PunterID(), (int)move.Route().size(), pass_count);
+                move.PunterID(), (int)move.Route().size(), pass_count[move.PunterID()]);
       }
-      return kBad;
+      goto move_bad;
     }
     const vector<int> prev_edge2pid = edge2pid;
+    const int prev_pass_count = pass_count[move.PunterID()];
     for (int i = 0; i < (int)move.Route().size() - 1; i++) {
       Move one_move = Move::Claim(move.PunterID(), move.Route()[i], move.Route()[i + 1]);
       Error nret = ApplyMove(map, one_move, verbose);
       if (nret == kBad) {
         // rollback
         edge2pid = prev_edge2pid;
-        return kBad;
+        pass_count[move.PunterID()] = prev_pass_count;
+        goto move_bad;
       }
     }
-    return kOk;
+    goto move_ok;
   } else {
-    pass_count++;
-    return kOk;
+    goto move_pass;
   }
+
+move_ok:
+  pass_count[move.PunterID()] = 0;
+  return kOk;
+move_pass:
+  pass_count[move.PunterID()]++;
+  return kOk;
+move_bad:
+  pass_count[move.PunterID()]++;
+  return kBad;
 }
 
 ostream& operator<<(ostream& stream, const MapState& map_state) {

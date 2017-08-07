@@ -62,11 +62,11 @@ private:
 class MapState {
 public:
   MapState() {;}
-  explicit MapState(const Map& map) { Clear(map); }
+  explicit MapState(const Map& map, int punter_num) { Clear(map, punter_num); }
 
-  void Clear(const Map& map) {
+  void Clear(const Map& map, int punter_num) {
     edge2pid.resize(map.EdgeNum(), -1);
-    pass_count = 0;
+    pass_count.resize(punter_num, 0);
   }
 
   Error ApplyMove(const Map& map, Move move, bool verbose=false);
@@ -84,8 +84,8 @@ public:
 
 private:
   vector<int> edge2pid;
-  int pass_count;
   vector<vector<int>> edge_importances;
+  vector<int> pass_count;
 
   friend ostream& operator<<(ostream& stream, const MapState& map_state);
 
