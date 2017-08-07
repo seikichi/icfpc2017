@@ -186,13 +186,20 @@ Move Greedy(const Game& game, const MapState& map_state) {
 vector<int> Bfs(const Map& map, const MapState& map_state, int mine, int punter_id, int ban_site_id = -1) {
   vector<int> dist(map.Sites().size(), INF);
 
-  priority_queue<pair<int, int>> q;
-  q.push(make_pair(0, mine));
+  queue<int> que;
+  queue<int> zero_que;
+  que.push(mine);
   dist[mine] = 0;
 
-  while (!q.empty()) {
-    int site = q.top().second;
-    q.pop();
+  while (!que.empty() && !zero_que.empty()) {
+    int site = -1;
+    if (!zero_que.empty()) {
+      site = zero_que.front();
+      zero_que.pop();
+    } else {
+      site = que.front();
+      que.pop();
+    }
     for (const Edge& e : map.Graph()[site]) {
       if (e.dest == ban_site_id) { continue; }
       if (map_state.Claimer(e.id) != -1 && map_state.Claimer(e.id) != punter_id)
@@ -202,7 +209,11 @@ vector<int> Bfs(const Map& map, const MapState& map_state, int mine, int punter_
       if (new_dist >= dist[e.dest])
         continue;
       dist[e.dest] = new_dist;
-      q.push(make_pair(new_dist, e.dest));
+      if (dist[site] == dist[e.dest]) {
+        zero_que.push(e.dest);
+      } else {
+        que.push(e.dest);
+      }
     }
   }
 
