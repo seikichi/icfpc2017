@@ -99,7 +99,12 @@ string OfflineClientProtocol::ReceiveStringWithState() {
   if (state_start == (int)string::npos) { return str; }
   int state_end = state_start;
   state_end = str.find(":", state_end + 1);
+  int brace = str.find("{", state_end + 1);
   state_end = str.find("\"", state_end + 1);
+  if (state_end == (int)string::npos || (brace != (int)string::npos && brace <= state_end)) {
+    return str;
+  }
+
   int state_str_start = state_end + 1;
   state_end = str.find("\"", state_end + 1);
   prev_state = str.substr(state_str_start, state_end - state_str_start);
