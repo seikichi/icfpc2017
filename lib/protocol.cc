@@ -49,7 +49,7 @@ GamePhase OfflineClientProtocol::Receive() {
     WriteStopLog(json);
     // NOTE: lamduct (official server?) does not return `state` property
     // prev_state = json.at("state").get<string>();
-  } else if (json.count("timeot")) {
+  } else if (json.count("timeout")) {
     phase = GamePhase::kTimeOut;
     timeout = json.at("timeout").get<double>();
   } else {
