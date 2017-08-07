@@ -19,7 +19,7 @@ GamePhase OfflineClientProtocol::Receive() {
   SendName();
   ReceiveName();
   phase = GamePhase::kFinishHandshake;
-  string str = ReceiveString();
+  string str = ReceiveStringWithState();
   const picojson::object json = StringToJson(str);
   if (json.count("punter")) {
     phase = GamePhase::kSetup;
@@ -31,7 +31,7 @@ GamePhase OfflineClientProtocol::Receive() {
       const auto &o = v.get<object>();
       other_moves.emplace_back(Move::Deserialize(o));
     }
-    prev_state = json.at("state").get<string>();
+    // prev_state = json.at("state").get<string>();
   } else if (json.count("stop")) {
     phase = GamePhase::kScoring;
     const auto &l_stop = json.at("stop").get<picojson::object>();
@@ -75,23 +75,40 @@ void OfflineClientProtocol::Send() {
       }
       l_ready["futures"] = picojson::value(l_futures);
     }
-    l_ready["state"] = picojson::value(next_state);
+    // l_ready["state"] = picojson::value(next_state);
 
     WriteSetupLog(game);
-    SendString(picojson::value(l_ready).serialize());
+    SendStringWithState(picojson::value(l_ready).serialize(), next_state);
   } else if (phase == GamePhase::kGamePlay) {
     assert(next_state != "");
     assert(player_move.PunterID() != -1);
     picojson::object l_move = player_move.SerializeJson();
-    l_move["state"] = picojson::value(next_state);
+    // l_move["state"] = picojson::value(next_state);
 
     WriteGamePlayLog(player_move, other_moves);
-    SendString(picojson::value(l_move).serialize());
+    SendStringWithState(picojson::value(l_move).serialize(), next_state);
   } else {
     fprintf(stderr, "This Phase can't send\n");
   }
 }
 
+// stateのシリアライズ・パースが一番重たいので手動でやる
+string OfflineClientProtocol::ReceiveStringWithState() {
+  string str = ReceiveString();
+  int state_start = str.find("\"state\"");
+  if (state_start == (int)string::npos) { return str; }
+  int state_end = state_start;
+  state_end = str.find(":", state_end + 1);
+  state_end = str.find("\"", state_end + 1);
+  int state_str_start = state_end + 1;
+  state_end = str.find("\"", state_end + 1);
+  prev_state = str.substr(state_str_start, state_end - state_str_start);
+  // stateがあった場所にはダミーを入れておく
+  string ret = str.substr(0, state_start) + "\"hoge\":\"fuga\"" + str.substr(state_end + 1);
+  // cerr << prev_state << endl;
+  // cerr << ret << endl;
+  return ret;
+}
 string OfflineClientProtocol::ReceiveString() {
   int json_size;
   char c;
@@ -105,6 +122,12 @@ string OfflineClientProtocol::ReceiveString() {
   return ret;
 }
 
+// stateのシリアライズ・パースが一番重たいので手動でやる
+void OfflineClientProtocol::SendStringWithState(const string &str, const string &state) {
+  string temp = str.substr(0, str.size() - 2);
+  temp += ",\"state\":\"" + state + "\"}";
+  SendString(temp);
+}
 void OfflineClientProtocol::SendString(const string &str) {
   cerr << "SEND:" << str.substr(0, 80) << endl;
   printf("%lu:%s", str.size(), str.c_str());

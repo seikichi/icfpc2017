@@ -66,7 +66,9 @@ public:
   virtual void Send();
 protected:
   virtual std::string ReceiveString();
+  std::string ReceiveStringWithState();
   virtual void SendString(const std::string &str);
+  void SendStringWithState(const std::string &str, const std::string &state);
 
   string receive_buffer;
 };
