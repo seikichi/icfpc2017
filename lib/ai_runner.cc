@@ -144,6 +144,7 @@ void RunAiWithTimeoutAndDie(
           done = true;
         }
       }
+      cv.notify_one();
   });
 
   // 待つ
