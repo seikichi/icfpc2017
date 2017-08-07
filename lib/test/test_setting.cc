@@ -42,6 +42,15 @@ TEST(setting, Splurges) {
   ASSERT_EQ(str, R"({"splurges":true})");
 }
 
+TEST(setting, Options) {
+  Setting setting;
+  setting.Deserialize(R"({"options":true})");
+  string str = setting.SerializeString();
+  // cout << str << endl;
+  ASSERT_TRUE(setting.Options());
+  ASSERT_EQ(str, R"({"options":true})");
+}
+
 TEST(setting, Deserialize) {
   Setting setting;
   bool ret = setting.Deserialize("{}");
