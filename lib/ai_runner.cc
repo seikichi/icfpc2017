@@ -28,21 +28,23 @@ string decode64(const string& value) {
   return ss.str();
 }
 
-string MakeState(const Game& game, const MapState& ms, int my_rounds) {
+string MakeState(const Game& game, const MapState& ms, int my_rounds, int timeout) {
   std::stringstream ss;
   boost::archive::binary_oarchive oar(ss);
   oar << game;
   oar << ms;
   oar << my_rounds;
+  oar << timeout;
   return encode64(ss.str());
 }
 
-void FromState(const string& state, Game* game, MapState* ms, int* my_rounds) {
+void FromState(const string& state, Game* game, MapState* ms, int* my_rounds, int* timeout) {
   std::stringstream ss(decode64(state));
   boost::archive::binary_iarchive iar(ss);
   iar >> *game;
   iar >> *ms;
   iar >> *my_rounds;
+  iar >> *timeout;
   game->RecoverFromDeserialize();
 }
 
@@ -50,7 +52,7 @@ void DoSetup(OfflineClientProtocol* protocol) {
   auto game = protocol->Game();
 
   MapState initial_map_state(game.Map(), game.PunterNum());
-  protocol->SetState(MakeState(game, initial_map_state, 0));
+  protocol->SetState(MakeState(game, initial_map_state, 0, 0));
   protocol->Send();
 }
 
@@ -113,14 +115,30 @@ void RunAiWithTimeoutAndDie(
   Game game;
   MapState map_state;
   int my_rounds;
-  FromState(protocol->State(), &game, &map_state, &my_rounds);
+  int timeout;
+  FromState(protocol->State(), &game, &map_state, &my_rounds, &timeout);
 
   // map_state を最新の状態に復元
+  bool pass = false;
   for (const Move& m : protocol->OtherMoves()) {
+    if (m.Type() == MoveType::kPass && m.PunterID() == game.PunterID()) {
+      pass = true;
+      timeout++;
+    }
     if (map_state.ApplyMove(game.Map(), m) != kOk) {
       cerr << "Illegal move: " << m << endl;
       continue;
     }
+  }
+  // 過去にタイムアウトしていれば更に deadline を減らしておく
+  // 1回目で -100, 最大 -200
+  if (timeout) {
+    deadline -= milliseconds(200 - 200 / (timeout + 1));
+  }
+  // 1つ前が pass ならデッドラインを短くしておく
+  // pass が連続してしまうと timeout を保存できない
+  if (pass) {
+    deadline -= milliseconds(100);
   }
 
   condition_variable cv;
@@ -177,7 +195,7 @@ void RunAiWithTimeoutAndDie(
 
   // 結果を送信して死ぬ
   protocol->SetPlayerMove(best_move);
-  protocol->SetState(MakeState(game, map_state, my_rounds + 1));
+  protocol->SetState(MakeState(game, map_state, my_rounds + 1, timeout));
   protocol->Send();
   _exit(0);
 }
