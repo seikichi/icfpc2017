@@ -233,7 +233,7 @@ int ChooseBestMine(const Game& game) {
       ++n_reachable_sites;
       if (sites[k].is_mine)
         ++n_reachable_mines;
-      sum_dist = dist;
+      sum_dist += dist;
     }
 
     pair<int, int> score = make_pair(n_reachable_sites * n_reachable_mines, -sum_dist);
